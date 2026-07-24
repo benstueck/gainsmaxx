@@ -36,7 +36,12 @@ vs Tour; handicap baselines are applied at the round level. Public API: `import 
 `app/round/actions.ts` (create/save/finish with server-side SG), the 9/18 chooser, the full-screen
 session (`app/round/[id]`, `components/round/*`) with par selector, custom numeric keypad, lie
 buttons, putting sub-mode, penalty/OOB, Holed, Undo, tap-to-edit, live SG, and debounced autosave.
-Next up: Milestone 7 (round summary + baseline toggle). See `tasks/`.
+
+**Milestone 7 done (verified):** round summary at `/round/[id]/summary` (`components/round/round-summary.tsx`,
+shared loader `lib/db/round-queries.ts`) — per-category diverging bars, Tee-to-Green + Total, a
+**baseline toggle** (My handicap / Tour / 0-25) that recomputes live, and a hole-by-hole table.
+Finish → summary; a complete round opens to its summary.
+Next up: Milestone 8 (feed cards + continue-in-progress + edit past rounds). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)

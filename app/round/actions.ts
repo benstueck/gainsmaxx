@@ -110,5 +110,5 @@ export async function finishRound(
     .update(rounds)
     .set({ status: "complete", updatedAt: new Date() })
     .where(and(eq(rounds.id, roundId), eq(rounds.userId, user.id)));
-  redirect("/feed");
+  redirect(`/round/${roundId}/summary`);
 }

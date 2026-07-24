@@ -1,10 +1,10 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getProfile } from "@/lib/db/queries";
 import { loadRound } from "@/lib/db/round-queries";
-import { RoundSession } from "@/components/round/round-session";
+import { RoundSummary } from "@/components/round/round-summary";
 
-export default async function RoundPage({
+export default async function RoundSummaryPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -14,18 +14,19 @@ export default async function RoundPage({
 
   const loaded = await loadRound(id, user.id);
   if (!loaded) notFound();
-  // A finished round opens as its summary, not the editor.
-  if (loaded.round.status === "complete") redirect(`/round/${id}/summary`);
 
   const profile = await getProfile(user.id);
   const handicap = profile?.handicap != null ? Number(profile.handicap) : null;
 
   return (
-    <RoundSession
+    <RoundSummary
       roundId={id}
+      status={loaded.round.status}
       numHoles={loaded.round.numHoles}
+      courseName={loaded.round.courseName}
+      playedAt={loaded.round.playedAt.toISOString()}
       handicap={handicap}
-      initialHoles={loaded.holes}
+      holes={loaded.holes}
     />
   );
 }

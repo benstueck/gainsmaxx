@@ -14,7 +14,7 @@ criteria**. Work top-down; keep checkboxes and the status line honest so any ses
 | 04  | [SG reference-data pipeline](04-sg-reference-data.md)            | done        | Real data ingested + corrected → `data/benchmarks/v1/benchmarks.json` |
 | 05  | [SG engine + tests](05-sg-engine.md)                             | done        | Pure `lib/sg/`, 20 tests green vs real data                           |
 | 06  | [Tracking session & shot-entry UX](06-tracking-session-entry.md) | done        | Full entry loop + live SG + autosave — verified end-to-end            |
-| 07  | [Round summary + baseline toggle](07-round-summary.md)           | not started | Per-round breakdown                                                   |
+| 07  | [Round summary + baseline toggle](07-round-summary.md)           | done        | Category breakdown + baseline toggle — verified live                  |
 | 08  | [Feed & edit past rounds](08-feed-and-editing.md)                | not started | Cards, continue-in-progress, edit + recompute                         |
 | 09  | [Profile stats & settings](09-profile-settings.md)               | not started | Career averages, handicap/units/baseline, logout                      |
 | 10  | [Offline-first & PWA](10-offline-pwa.md)                         | not started | Serwist SW, Dexie, sync layer                                         |
