@@ -2,8 +2,11 @@
 // The SG engine imports this shape; the ingestion script (scripts/ingest-benchmarks.mjs)
 // produces it. Keep the two in sync.
 
-/** Lies used by the long-game (full-swing) expected-strokes table. */
-export type Lie = "tee" | "fairway" | "rough" | "sand" | "recovery";
+/** Lies covered by the long-game (full-swing) expected-strokes table. */
+export type LongGameLie = "tee" | "fairway" | "rough" | "sand" | "recovery";
+
+/** Any position a ball can rest — long-game lies plus the green (putting). */
+export type Lie = LongGameLie | "green";
 
 /** The four strokes-gained categories. */
 export type SgCategory = "ott" | "app" | "arg" | "putt";
@@ -18,7 +21,7 @@ export interface LongGameTable {
   /** Distance unit for the pairs below. */
   unit: "yards";
   /** Sorted expected-strokes-to-hole-out points per lie (Tour baseline). */
-  lies: Record<Lie, BenchmarkPoint[]>;
+  lies: Record<LongGameLie, BenchmarkPoint[]>;
 }
 
 export interface PuttingTable {

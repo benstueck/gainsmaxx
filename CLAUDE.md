@@ -26,7 +26,11 @@ key + `DATABASE_URL` (pooler) + `DIRECT_URL`.
 `/auth/confirm`), route protection via `(app)/layout.tsx` + `proxy.ts`, NUX (handicap) writing
 `profiles`, and the 3-tab shell (Rounds / "+" / Profile). Email confirmation is **disabled** in
 the Supabase project, so signup flows straight through to NUX (verified end-to-end).
-Next up: Milestone 5 (SG engine) and Milestone 6 (tracking session + shot entry). See `tasks/`.
+**Milestone 5 done:** the pure SG engine lives in `lib/sg/` (`expectedStrokes`, `interpolate`,
+`categorize`, `strokesGainedForShot`, `holeStrokesGained`, `handicapAdjustment`,
+`roundStrokesGained`) with 20 Vitest tests green against the real benchmark data. Per-shot SG is
+vs Tour; handicap baselines are applied at the round level. Public API: `import { … } from "@/lib/sg"`.
+Next up: Milestone 6 (tracking session + shot entry). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)
