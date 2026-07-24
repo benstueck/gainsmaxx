@@ -20,8 +20,13 @@ schema, migrations (`lib/db/migrations/`, incl. RLS + policies + profile trigger
 and `@supabase/ssr` helpers + `proxy.ts`. **Supabase project is live and migrated** — tables,
 RLS + per-user policies, and the signup trigger verified in the DB. Auth uses the new
 `sb_publishable_…` key (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). `.env.local` has URL + publishable
-key + `DIRECT_URL`; add pooled `DATABASE_URL` for production runtime later.
-Next up: Milestone 3 (auth + NUX + 3-tab shell) and Milestone 5 (SG engine). See `tasks/`.
+key + `DATABASE_URL` (pooler) + `DIRECT_URL`.
+
+**Milestone 3 done (verified end-to-end):** email/password auth (server actions +
+`/auth/confirm`), route protection via `(app)/layout.tsx` + `proxy.ts`, NUX (handicap) writing
+`profiles`, and the 3-tab shell (Rounds / "+" / Profile). Note: **email confirmation is ON** in
+the Supabase project — see `tasks/03` to disable it for the smoothest personal flow.
+Next up: Milestone 5 (SG engine) and Milestone 6 (tracking session + shot entry). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)

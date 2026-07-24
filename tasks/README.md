@@ -10,8 +10,8 @@ criteria**. Work top-down; keep checkboxes and the status line honest so any ses
 | --- | ---------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------ |
 | 01  | [Repo bootstrap](01-repo-bootstrap.md)                           | done        | Next.js 16 + Tailwind v4, light-only design system, Vitest — app runs          |
 | 02  | [Supabase, schema & RLS](02-supabase-schema-rls.md)              | done        | Migrations applied to live project; tables + RLS + trigger verified            |
-| 03  | [Auth, NUX & app shell](03-auth-nux-shell.md)                    | not started | 3-tab bottom bar                                                               |
-| 04  | [SG reference-data pipeline](04-sg-reference-data.md)            | mostly done | Real data ingested → `data/benchmarks/v1/benchmarks.json`; confirm 3 anomalies |
+| 03  | [Auth, NUX & app shell](03-auth-nux-shell.md)                    | done        | Email auth, NUX (handicap), 3-tab shell — verified end-to-end                  |
+| 04  | [SG reference-data pipeline](04-sg-reference-data.md)            | done        | Real data ingested + corrected → `data/benchmarks/v1/benchmarks.json`          |
 | 05  | [SG engine + tests](05-sg-engine.md)                             | not started | Pure `lib/sg/`, fully unit-tested                                              |
 | 06  | [Tracking session & shot-entry UX](06-tracking-session-entry.md) | not started | **Highest-care milestone**                                                     |
 | 07  | [Round summary + baseline toggle](07-round-summary.md)           | not started | Per-round breakdown                                                            |
