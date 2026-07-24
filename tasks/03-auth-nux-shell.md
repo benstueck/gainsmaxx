@@ -32,8 +32,8 @@ bottom-bar** shell that everything else hangs off.
 
 ## Notes
 
-- **Email confirmation is ON** in the Supabase project, so raw signup returns no session until
-  the emailed link is clicked (the UI shows a "check your email" message). For the smoothest
-  personal-first flow, disable it: Supabase → Authentication → Sign In / Providers → Email →
-  turn off "Confirm email". The app supports both modes.
+- **Email confirmation is now OFF** in the Supabase project — signup creates a session
+  immediately and flows straight to NUX (verified: signup → NUX → Feed with handicap saved). The
+  app still supports confirmation-on mode (the "check your email" message + `/auth/confirm` route)
+  if it's ever re-enabled.
 - Signup trigger verified: a `profiles` row is auto-created on signup (handicap null → NUX).

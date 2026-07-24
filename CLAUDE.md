@@ -24,8 +24,8 @@ key + `DATABASE_URL` (pooler) + `DIRECT_URL`.
 
 **Milestone 3 done (verified end-to-end):** email/password auth (server actions +
 `/auth/confirm`), route protection via `(app)/layout.tsx` + `proxy.ts`, NUX (handicap) writing
-`profiles`, and the 3-tab shell (Rounds / "+" / Profile). Note: **email confirmation is ON** in
-the Supabase project — see `tasks/03` to disable it for the smoothest personal flow.
+`profiles`, and the 3-tab shell (Rounds / "+" / Profile). Email confirmation is **disabled** in
+the Supabase project, so signup flows straight through to NUX (verified end-to-end).
 Next up: Milestone 5 (SG engine) and Milestone 6 (tracking session + shot entry). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
