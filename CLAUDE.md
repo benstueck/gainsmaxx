@@ -30,7 +30,13 @@ the Supabase project, so signup flows straight through to NUX (verified end-to-e
 `categorize`, `strokesGainedForShot`, `holeStrokesGained`, `handicapAdjustment`,
 `roundStrokesGained`) with 20 Vitest tests green against the real benchmark data. Per-shot SG is
 vs Tour; handicap baselines are applied at the round level. Public API: `import { … } from "@/lib/sg"`.
-Next up: Milestone 6 (tracking session + shot entry). See `tasks/`.
+
+**Milestone 6 done (verified end-to-end):** the tracking session + shot-entry UX. `lib/round.ts`
+(session domain — a shot stores only where it ended up; starts are derived so edits re-chain),
+`app/round/actions.ts` (create/save/finish with server-side SG), the 9/18 chooser, the full-screen
+session (`app/round/[id]`, `components/round/*`) with par selector, custom numeric keypad, lie
+buttons, putting sub-mode, penalty/OOB, Holed, Undo, tap-to-edit, live SG, and debounced autosave.
+Next up: Milestone 7 (round summary + baseline toggle). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)
