@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+package-lock.json
+next-env.d.ts
+# Generated / source reference data — keep verbatim
+data/reference
+data/benchmarks/v1
+lib/db/migrations

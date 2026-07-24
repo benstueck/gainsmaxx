@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784914383852,
+      "tag": "0000_volatile_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784914394725,
+      "tag": "0001_supabase_rls",
+      "breakpoints": true
+    }
+  ]
+}
