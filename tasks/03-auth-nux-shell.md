@@ -15,8 +15,8 @@ bottom-bar** shell that everything else hangs off.
       _(Google OAuth deferred.)_
 - [x] Route protection: `(app)/layout.tsx` requires a session; `/`, `/login`, `/signup` redirect
       by auth state. Session refresh in `proxy.ts`.
-- [x] **NUX** (`app/nux/`): set **handicap** (0–54, validated) → writes `profiles`, then Feed.
-      Units default to imperial (metric deferred, so no toggle yet).
+- [x] **NUX** (`app/nux/`): set **username** (required) + **handicap** (0–54, validated) → writes
+      `profiles`, then Feed. Units default to imperial (metric deferred, so no toggle yet).
 - [x] **3-tab bottom bar** (`components/shell/tab-bar.tsx`, ≥ 64px, thumb zone, `pb-safe`):
   - [x] **Rounds** (left) — Feed placeholder (real cards in Task 08).
   - [x] **"+"** (center) — circular primary button → `/round/new` placeholder (real flow Task 06).

@@ -36,7 +36,10 @@ export default async function ProfilePage() {
 
   return (
     <main className="mx-auto w-full max-w-md px-5 py-6">
-      <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
+      <h1 className="text-2xl font-bold tracking-tight">
+        {profile?.username || "Profile"}
+      </h1>
+      {profile?.username && <p className="text-sm text-muted">{user.email}</p>}
 
       {/* Career stats */}
       <section className="mt-5 rounded-app border border-border p-4">

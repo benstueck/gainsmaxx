@@ -11,12 +11,20 @@ export async function completeOnboardingAction(
   formData: FormData,
 ): Promise<NuxState> {
   const user = await requireUser();
+
+  const username = String(formData.get("username") ?? "").trim();
+  if (!username) {
+    return { error: "Enter a username." };
+  }
+
   const raw = String(formData.get("handicap") ?? "").trim();
   const value = Number(raw);
   if (!raw || Number.isNaN(value) || value < 0 || value > 54) {
     return { error: "Enter a handicap index between 0 and 54." };
   }
+
   await completeOnboarding(user.id, {
+    username,
     handicap: value.toFixed(1),
     units: "imperial",
   });

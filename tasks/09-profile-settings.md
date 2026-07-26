@@ -35,7 +35,8 @@ The Profile tab: lightweight high-level stats + account/preferences management.
 **Settings**
 
 - [x] Edit **handicap** (re-interpolates baseline everywhere — verified stats/dropdown update live).
-- [x] Edit **username**. Email edit via `supabase.auth.updateUser({ email })`.
+- [x] Edit **username** (also now captured at NUX; displayed as the Profile page header, with the
+      Settings field defaulting to the current value). Email edit via `supabase.auth.updateUser({ email })`.
 - [x] **Change password** (`supabase.auth.updateUser({ password })`) — verified: logged out,
       signed back in with the new password.
 - [x] **Default baseline** picker (My handicap / Tour / Scratch..25) — feeds Feed + Profile stats + the round summary's initial toggle position.

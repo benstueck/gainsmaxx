@@ -25,15 +25,20 @@ export async function ensureProfile(userId: string): Promise<Profile> {
   return (await getProfile(userId))!;
 }
 
-/** Persist first-run onboarding: handicap + units. */
+/** Persist first-run onboarding: username + handicap + units. */
 export async function completeOnboarding(
   userId: string,
-  data: { handicap: string; units: string },
+  data: { username: string; handicap: string; units: string },
 ): Promise<void> {
   const db = getDb();
   await db
     .update(profiles)
-    .set({ handicap: data.handicap, units: data.units, updatedAt: new Date() })
+    .set({
+      username: data.username,
+      handicap: data.handicap,
+      units: data.units,
+      updatedAt: new Date(),
+    })
     .where(eq(profiles.id, userId));
 }
 

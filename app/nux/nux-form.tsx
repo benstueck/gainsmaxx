@@ -17,10 +17,21 @@ export function NuxForm() {
         <span className="text-5xl">⛳️</span>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Welcome</h1>
         <p className="mt-1 text-muted">
-          Set your handicap so we can measure your strokes gained against the
+          Set up your profile so we can measure your strokes gained against the
           right baseline.
         </p>
       </div>
+
+      <label className="flex flex-col gap-2">
+        <span className="font-semibold">Username</span>
+        <Input
+          name="username"
+          placeholder="e.g. Ben"
+          required
+          autoFocus
+          autoComplete="nickname"
+        />
+      </label>
 
       <label className="flex flex-col gap-2">
         <span className="font-semibold">Your handicap index</span>
@@ -33,7 +44,6 @@ export function NuxForm() {
           max="54"
           placeholder="e.g. 12.4"
           required
-          autoFocus
         />
         <span className="text-sm text-muted">
           Distances use yards &amp; feet. You can change this later in settings.
