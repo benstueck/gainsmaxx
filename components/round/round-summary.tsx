@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { deleteRound } from "@/app/round/actions";
 import { holeShotInputs, isHoleComplete, type HoleState } from "@/lib/round";
 import {
   holeStrokesGained,
@@ -85,6 +86,14 @@ export function RoundSummary({
 }) {
   const options = baselineOptions(handicap);
   const [selectedKey, setSelectedKey] = useState(options[0].key);
+  const [deleting, startDelete] = useTransition();
+
+  function onDelete() {
+    if (!confirm("Delete this round? This can't be undone.")) return;
+    startDelete(() => {
+      void deleteRound(roundId);
+    });
+  }
   const baseline =
     options.find((o) => o.key === selectedKey)?.baseline ?? "tour";
 
@@ -251,14 +260,31 @@ export function RoundSummary({
         </>
       )}
 
-      {status === "in_progress" && (
-        <Link
-          href={`/round/${roundId}`}
-          className="flex min-h-tap items-center justify-center rounded-app bg-primary px-6 text-lg font-semibold text-primary-foreground"
+      <div className="flex flex-col gap-2 pt-2">
+        {status === "in_progress" ? (
+          <Link
+            href={`/round/${roundId}`}
+            className="flex min-h-tap items-center justify-center rounded-app bg-primary px-6 text-lg font-semibold text-primary-foreground"
+          >
+            Continue round
+          </Link>
+        ) : (
+          <Link
+            href={`/round/${roundId}?edit=1`}
+            className="flex min-h-tap items-center justify-center rounded-app border border-border bg-surface px-6 text-lg font-semibold"
+          >
+            Edit round
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="min-h-tap text-sm font-semibold text-negative disabled:opacity-40"
         >
-          Continue round
-        </Link>
-      )}
+          {deleting ? "Deleting…" : "Delete round"}
+        </button>
+      </div>
     </main>
   );
 }

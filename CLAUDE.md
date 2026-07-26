@@ -41,7 +41,13 @@ buttons, putting sub-mode, penalty/OOB, Holed, Undo, tap-to-edit, live SG, and d
 shared loader `lib/db/round-queries.ts`) — per-category diverging bars, Tee-to-Green + Total, a
 **baseline toggle** (My handicap / Tour / 0-25) that recomputes live, and a hole-by-hole table.
 Finish → summary; a complete round opens to its summary.
-Next up: Milestone 8 (feed cards + continue-in-progress + edit past rounds). See `tasks/`.
+
+**Milestone 8 done (verified):** the Feed tab (`app/(app)/feed/page.tsx`,
+`components/round/feed-card.tsx`) lists rounds newest-first with mini category bars, pins any
+in-progress round at top as "Continue". `?edit=1` on `/round/[id]` reopens a completed round in
+the session editor; deleting a shot mid-hole re-chains automatically (derived starts). The
+summary has **Edit round** / **Delete round** actions (`deleteRound` in `app/round/actions.ts`).
+Next up: Milestone 9 (profile stats + settings). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)

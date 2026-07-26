@@ -98,6 +98,16 @@ export async function saveRound(
   await persist(roundId, holeStates);
 }
 
+/** Permanently delete a round (holes/shots cascade). */
+export async function deleteRound(roundId: string): Promise<void> {
+  const user = await requireUser();
+  const db = getDb();
+  await db
+    .delete(rounds)
+    .where(and(eq(rounds.id, roundId), eq(rounds.userId, user.id)));
+  redirect("/feed");
+}
+
 /** Persist final state, mark the round complete, and return to the feed. */
 export async function finishRound(
   roundId: string,

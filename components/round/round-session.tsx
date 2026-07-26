@@ -61,6 +61,7 @@ type Action =
   | { type: "holeOut" }
   | { type: "undo" }
   | { type: "editShot"; index: number }
+  | { type: "deleteShot"; index: number }
   | { type: "nextHole"; numHoles: number }
   | { type: "prevHole" };
 
@@ -184,6 +185,17 @@ function reducer(state: State, action: Action): State {
           penalty: s.penaltyStrokes,
           editing: action.index,
         },
+      };
+    }
+
+    case "deleteShot": {
+      const idx = action.index;
+      return {
+        ...withHole(state, (h) => ({
+          ...h,
+          shots: h.shots.filter((_, i) => i !== idx),
+        })),
+        draft: EMPTY_DRAFT,
       };
     }
 
@@ -507,12 +519,26 @@ export function RoundSession({
             />
 
             <div className="flex gap-2">
-              <BigButton
-                variant="secondary"
-                onClick={() => dispatch({ type: "holeOut" })}
-              >
-                Holed
-              </BigButton>
+              {state.draft.editing != null ? (
+                <BigButton
+                  variant="danger"
+                  onClick={() =>
+                    dispatch({
+                      type: "deleteShot",
+                      index: state.draft.editing!,
+                    })
+                  }
+                >
+                  Delete
+                </BigButton>
+              ) : (
+                <BigButton
+                  variant="secondary"
+                  onClick={() => dispatch({ type: "holeOut" })}
+                >
+                  Holed
+                </BigButton>
+              )}
               <BigButton
                 block
                 disabled={!canAdd}
