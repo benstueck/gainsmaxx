@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { deleteRound } from "@/app/round/actions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { holeShotInputs, isHoleComplete, type HoleState } from "@/lib/round";
 import {
   holeStrokesGained,
@@ -87,9 +88,9 @@ export function RoundSummary({
   const options = baselineOptions(handicap);
   const [selectedKey, setSelectedKey] = useState(options[0].key);
   const [deleting, startDelete] = useTransition();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  function onDelete() {
-    if (!confirm("Delete this round? This can't be undone.")) return;
+  function onConfirmDelete() {
     startDelete(() => {
       void deleteRound(roundId);
     });
@@ -278,13 +279,24 @@ export function RoundSummary({
         )}
         <button
           type="button"
-          onClick={onDelete}
+          onClick={() => setConfirmingDelete(true)}
           disabled={deleting}
           className="min-h-tap text-sm font-semibold text-negative disabled:opacity-40"
         >
           {deleting ? "Deleting…" : "Delete round"}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Delete this round?"
+        description="This permanently removes the round and every shot in it. This can't be undone."
+        confirmLabel="Delete round"
+        destructive
+        pending={deleting}
+        onConfirm={onConfirmDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </main>
   );
 }

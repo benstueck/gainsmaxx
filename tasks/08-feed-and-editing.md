@@ -19,11 +19,14 @@ The Feed tab (rounds newest-first) and the ability to edit any past round/shot w
   editing an existing shot). Deleting re-chains automatically (start is derived).
 - `round-summary.tsx` — added **Edit round** (in-progress → Continue; complete → `?edit=1`) and
   **Delete round** (confirm → `deleteRound` server action → Feed).
+- `components/ui/confirm-dialog.tsx` — a reusable in-app confirmation modal (light-mode,
+  big-target, bottom-sheet on mobile) replacing the native `confirm()` for destructive actions.
 - `app/round/actions.ts` — added `deleteRound`.
 
 ## Checklist
 
 **Feed**
+
 - [x] Rounds newest-first as cards: date, course, holes, score, **Total SG** vs the user's
       handicap baseline, mini category bars (OTT/APP/ARG/PUTT).
 - [x] **In-progress round pinned at top**, visually distinct (primary border/tint), "Continue →".
@@ -31,6 +34,7 @@ The Feed tab (rounds newest-first) and the ability to edit any past round/shot w
 - [x] Empty state for no rounds.
 
 **Editing**
+
 - [x] Open a saved round → reuse the shot-entry UI to edit lie/distance/penalty/par.
 - [x] SG recomputes on save (same server-side `persist()` path as normal autosave).
 - [x] Delete a shot mid-hole → remaining shots re-chain automatically (derived starts).
