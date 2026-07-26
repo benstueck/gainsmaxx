@@ -5,11 +5,11 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { deleteRound } from "@/app/round/actions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { baselineOptions } from "@/lib/baseline";
 import { holeShotInputs, isHoleComplete, type HoleState } from "@/lib/round";
 import {
   holeStrokesGained,
   roundStrokesGained,
-  type Baseline,
   type SgCategory,
 } from "@/lib/sg";
 
@@ -23,28 +23,6 @@ const CATEGORY_ORDER: SgCategory[] = ["ott", "app", "arg", "putt"];
 
 const fmtSg = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
 const fmtToPar = (v: number) => (v === 0 ? "E" : v > 0 ? `+${v}` : `${v}`);
-
-type Option = { key: string; label: string; baseline: Baseline };
-
-function baselineOptions(handicap: number | null): Option[] {
-  const opts: Option[] = [];
-  if (handicap != null) {
-    opts.push({
-      key: "me",
-      label: `My handicap (${handicap.toFixed(1)})`,
-      baseline: handicap,
-    });
-  }
-  opts.push({ key: "tour", label: "PGA Tour", baseline: "tour" });
-  for (const l of [0, 5, 10, 15, 20, 25]) {
-    opts.push({
-      key: `L${l}`,
-      label: l === 0 ? "Scratch (0)" : `${l} handicap`,
-      baseline: l,
-    });
-  }
-  return opts;
-}
 
 /** Diverging bar: green right of the zero midpoint for gained, red left for lost. */
 function SgBar({ value, max }: { value: number; max: number }) {
@@ -75,6 +53,7 @@ export function RoundSummary({
   courseName,
   playedAt,
   handicap,
+  defaultBaseline,
   holes,
 }: {
   roundId: string;
@@ -83,10 +62,14 @@ export function RoundSummary({
   courseName: string | null;
   playedAt: string;
   handicap: number | null;
+  defaultBaseline: string;
   holes: HoleState[];
 }) {
   const options = baselineOptions(handicap);
-  const [selectedKey, setSelectedKey] = useState(options[0].key);
+  const initialValue = options.some((o) => o.value === defaultBaseline)
+    ? defaultBaseline
+    : options[0].value;
+  const [selectedValue, setSelectedValue] = useState(initialValue);
   const [deleting, startDelete] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -96,7 +79,7 @@ export function RoundSummary({
     });
   }
   const baseline =
-    options.find((o) => o.key === selectedKey)?.baseline ?? "tour";
+    options.find((o) => o.value === selectedValue)?.baseline ?? "tour";
 
   const playedHoles = holes.filter((h) => h.shots.length > 0);
 
@@ -167,12 +150,12 @@ export function RoundSummary({
                 Strokes gained vs
               </span>
               <select
-                value={selectedKey}
-                onChange={(e) => setSelectedKey(e.target.value)}
+                value={selectedValue}
+                onChange={(e) => setSelectedValue(e.target.value)}
                 className="h-10 rounded-app border border-border bg-background px-2 text-sm font-semibold"
               >
                 {options.map((o) => (
-                  <option key={o.key} value={o.key}>
+                  <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}

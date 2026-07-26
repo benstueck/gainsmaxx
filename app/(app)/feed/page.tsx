@@ -1,13 +1,18 @@
 import { requireUser } from "@/lib/auth";
 import { getProfile } from "@/lib/db/queries";
 import { loadUserRounds } from "@/lib/db/round-queries";
+import { resolveBaseline } from "@/lib/baseline";
 import { FeedCard } from "@/components/round/feed-card";
 
 export default async function FeedPage() {
   const user = await requireUser();
   const profile = await getProfile(user.id);
   const handicap = profile?.handicap != null ? Number(profile.handicap) : null;
-  const rounds = await loadUserRounds(user.id, handicap ?? "tour");
+  const baseline = resolveBaseline(
+    profile?.defaultBaseline ?? "handicap",
+    handicap,
+  );
+  const rounds = await loadUserRounds(user.id, baseline);
 
   const inProgress = rounds.filter((r) => r.status === "in_progress");
   const completed = rounds.filter((r) => r.status === "complete");

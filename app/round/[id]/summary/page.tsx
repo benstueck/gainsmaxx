@@ -26,6 +26,7 @@ export default async function RoundSummaryPage({
       courseName={loaded.round.courseName}
       playedAt={loaded.round.playedAt.toISOString()}
       handicap={handicap}
+      defaultBaseline={profile?.defaultBaseline ?? "handicap"}
       holes={loaded.holes}
     />
   );

@@ -16,7 +16,7 @@ criteria**. Work top-down; keep checkboxes and the status line honest so any ses
 | 06  | [Tracking session & shot-entry UX](06-tracking-session-entry.md) | done        | Full entry loop + live SG + autosave — verified end-to-end            |
 | 07  | [Round summary + baseline toggle](07-round-summary.md)           | done        | Category breakdown + baseline toggle — verified live                  |
 | 08  | [Feed & edit past rounds](08-feed-and-editing.md)                | done        | Cards, continue-in-progress, edit + delete — verified end-to-end      |
-| 09  | [Profile stats & settings](09-profile-settings.md)               | not started | Career averages, handicap/units/baseline, logout                      |
+| 09  | [Profile stats & settings](09-profile-settings.md)               | done        | Career averages + editable settings — verified end-to-end             |
 | 10  | [Offline-first & PWA](10-offline-pwa.md)                         | not started | Serwist SW, Dexie, sync layer                                         |
 | 11  | [QA & deploy](11-qa-deploy.md)                                   | not started | Verification + Vercel                                                 |
 

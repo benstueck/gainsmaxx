@@ -47,7 +47,15 @@ Finish → summary; a complete round opens to its summary.
 in-progress round at top as "Continue". `?edit=1` on `/round/[id]` reopens a completed round in
 the session editor; deleting a shot mid-hole re-chains automatically (derived starts). The
 summary has **Edit round** / **Delete round** actions (`deleteRound` in `app/round/actions.ts`).
-Next up: Milestone 9 (profile stats + settings). See `tasks/`.
+
+**Milestone 9 done (verified):** Profile tab (`app/(app)/profile/page.tsx`) — career stats
+(`lib/career-stats.ts`: rounds played, avg total SG, avg per-category) + editable settings
+(`components/profile/settings-forms.tsx`, actions in `app/profile/actions.ts`): handicap,
+username, email, password, and a **default baseline** preference. `lib/baseline.ts` centralizes
+baseline resolution/options so Feed, Profile stats, and the round summary toggle agree; settings
+forms are keyed by their current server value so a save re-syncs the field instantly instead of
+flashing stale for a render (a `revalidatePath` + uncontrolled-input quirk).
+Next up: Milestone 10 (offline-first PWA). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)

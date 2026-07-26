@@ -36,3 +36,39 @@ export async function completeOnboarding(
     .set({ handicap: data.handicap, units: data.units, updatedAt: new Date() })
     .where(eq(profiles.id, userId));
 }
+
+/** Update the user's handicap index (re-interpolates baselines everywhere). */
+export async function updateHandicap(
+  userId: string,
+  handicap: string,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(profiles)
+    .set({ handicap, updatedAt: new Date() })
+    .where(eq(profiles.id, userId));
+}
+
+/** Update the display username. */
+export async function updateUsername(
+  userId: string,
+  username: string,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(profiles)
+    .set({ username, updatedAt: new Date() })
+    .where(eq(profiles.id, userId));
+}
+
+/** Update the preferred default SG baseline ("handicap" | "tour" | "0".."25"). */
+export async function updateDefaultBaseline(
+  userId: string,
+  defaultBaseline: string,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(profiles)
+    .set({ defaultBaseline, updatedAt: new Date() })
+    .where(eq(profiles.id, userId));
+}
