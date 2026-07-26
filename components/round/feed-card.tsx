@@ -11,7 +11,7 @@ const MINI: { key: SgCategory; label: string }[] = [
   { key: "putt", label: "PUTT" },
 ];
 
-const fmtSg = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}`;
+const fmtSg = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
 const fmtToPar = (v: number) => (v === 0 ? "E" : v > 0 ? `+${v}` : `${v}`);
 
 function MiniBar({ value, max }: { value: number; max: number }) {

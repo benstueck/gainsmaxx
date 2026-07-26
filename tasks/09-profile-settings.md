@@ -38,8 +38,7 @@ The Profile tab: lightweight high-level stats + account/preferences management.
 - [x] Edit **username**. Email edit via `supabase.auth.updateUser({ email })`.
 - [x] **Change password** (`supabase.auth.updateUser({ password })`) — verified: logged out,
       signed back in with the new password.
-- [x] **Default baseline** picker (My handicap / Tour / Scratch..25) — feeds Feed + Profile stats
-      + the round summary's initial toggle position.
+- [x] **Default baseline** picker (My handicap / Tour / Scratch..25) — feeds Feed + Profile stats + the round summary's initial toggle position.
 - [x] **Units** shown as a fixed "Yards & feet" row (metric deferred per the design doc — no
       functional second option to build a toggle for yet).
 - [x] **Log out** (already existed; still present below settings).
