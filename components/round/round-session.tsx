@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
-import { X, Undo2, Flag } from "lucide-react";
+import { X, Undo2, Flag, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BigButton } from "@/components/ui/big-button";
 import { NumericKeypad } from "@/components/round/numeric-keypad";
@@ -63,7 +63,7 @@ type Action =
   | { type: "editShot"; index: number }
   | { type: "deleteShot"; index: number }
   | { type: "nextHole"; numHoles: number }
-  | { type: "prevHole" };
+  | { type: "goToHole"; index: number };
 
 function withHole(state: State, fn: (h: HoleState) => HoleState): State {
   const holes = state.holes.slice();
@@ -208,9 +208,12 @@ function reducer(state: State, action: Action): State {
       return { holes, current: nextIndex, draft: EMPTY_DRAFT };
     }
 
-    case "prevHole":
-      if (state.current === 0) return state;
-      return { ...state, current: state.current - 1, draft: EMPTY_DRAFT };
+    case "goToHole": {
+      // Only lets you jump to a hole already reached — reaching a new hole
+      // still requires completing the current one via "Next hole".
+      if (action.index < 0 || action.index >= state.holes.length) return state;
+      return { ...state, current: action.index, draft: EMPTY_DRAFT };
+    }
 
     default:
       return state;
@@ -280,6 +283,9 @@ export function RoundSession({
     return () => clearTimeout(t);
   }, [state.holes, roundId]);
 
+  const canGoBack = state.current > 0;
+  const canGoForward = state.current < state.holes.length - 1;
+
   const putting = start?.lie === "green";
   const entryUnit = putting ? "ft" : unitFor(state.draft.endLie ?? "fairway");
   const canAdd =
@@ -301,13 +307,37 @@ export function RoundSession({
         <Link href="/feed" aria-label="Exit round" className="p-2 text-muted">
           <X size={24} />
         </Link>
-        <div className="text-center">
-          <div className="text-sm font-semibold">
-            Hole {hole.holeNumber} of {numHoles}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="Previous hole"
+            disabled={!canGoBack}
+            onClick={() =>
+              dispatch({ type: "goToHole", index: state.current - 1 })
+            }
+            className="p-1 text-muted disabled:opacity-25"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div className="text-center">
+            <div className="text-sm font-semibold">
+              Hole {hole.holeNumber} of {numHoles}
+            </div>
+            <div className="text-xs text-muted">
+              Round SG {fmtSg(round.total)} · {round.score} strokes
+            </div>
           </div>
-          <div className="text-xs text-muted">
-            Round SG {fmtSg(round.total)} · {round.score} strokes
-          </div>
+          <button
+            type="button"
+            aria-label="Next hole"
+            disabled={!canGoForward}
+            onClick={() =>
+              dispatch({ type: "goToHole", index: state.current + 1 })
+            }
+            className="p-1 text-muted disabled:opacity-25"
+          >
+            <ChevronRight size={22} />
+          </button>
         </div>
         <button
           type="button"

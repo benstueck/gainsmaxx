@@ -33,6 +33,8 @@ This is the product — invest disproportionately here.
 - [x] Next shot **auto-carries start** from previous end.
 - [x] One-tap **Undo**; tap any shot row to **edit** (loads draft, recomputes live).
 - [x] **Next hole** resets to Tee; **Finish** completes the round → Feed.
+- [x] Header **back/forward chevrons** jump between already-reached holes (no data loss;
+      re-entering a hole shows its full state — complete or in-progress — for correction).
 - [x] Live SG per shot vs Tour; round total vs the user's handicap baseline.
 - [x] Debounced **autosave** to Supabase; reload/continue reconstructs the round.
 
