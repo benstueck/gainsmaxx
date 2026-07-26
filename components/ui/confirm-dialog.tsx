@@ -38,7 +38,7 @@ export function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-sm rounded-t-app bg-background p-5 pb-safe sm:rounded-app"
+        className="w-full max-w-sm rounded-t-app bg-background p-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:rounded-app sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-dialog-title" className="text-lg font-bold">
@@ -47,7 +47,7 @@ export function ConfirmDialog({
         {description && (
           <p className="mt-1.5 text-sm text-muted">{description}</p>
         )}
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="mt-6 flex flex-col gap-3">
           <BigButton
             variant={destructive ? "danger" : "primary"}
             block
