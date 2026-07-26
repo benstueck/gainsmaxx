@@ -15,14 +15,19 @@ The Profile tab: lightweight high-level stats + account/preferences management.
 - `lib/career-stats.ts` — pure `computeCareerStats(rounds)`: rounds played, avg total SG, avg
   per-category SG, over completed rounds only.
 - `lib/db/queries.ts` — `updateHandicap`, `updateUsername`, `updateDefaultBaseline`.
-- `app/profile/actions.ts` — server actions for handicap, username, default baseline, email
-  (`supabase.auth.updateUser`), and password (`supabase.auth.updateUser`).
-- `components/profile/settings-forms.tsx` — one small form per field (`useActionState`), each
-  **keyed by its current server value** in `profile/page.tsx` so a save re-syncs the field
-  immediately instead of flashing stale for one render (a known `revalidatePath` +
-  uncontrolled-input quirk — confirmed via DB read that data was correct even during the flash).
-- `app/(app)/profile/page.tsx` — career stats card + settings list; `app/(app)/feed/page.tsx`
-  updated to use `resolveBaseline` instead of a hardcoded `handicap ?? "tour"`.
+- `app/profile/actions.ts` — **`updateProfileAction`**: one server action that validates and
+  saves handicap, default baseline, username, and email (via `supabase.auth.updateUser`)
+  together; **`updatePasswordAction`** stays separate (its own `supabase.auth.updateUser` call).
+- `components/profile/settings-forms.tsx` — **`ProfileSettingsForm`** (all four fields, one
+  submit) and **`PasswordForm`**. (An earlier per-field-button, then a per-field-autosave-on-blur
+  design were both tried and rejected — autosave-on-blur didn't feel right on mobile web. This
+  single-form-per-section shape is the one that stuck.)
+- `app/(app)/profile/page.tsx` — two bordered sections, **Profile** (stats-adjacent settings,
+  one "Save changes" button) and **Password** (its own "Update password" button). The
+  `ProfileSettingsForm` is **keyed by its current server values** so a save re-syncs the
+  (uncontrolled) fields immediately instead of flashing stale for one render — a
+  `revalidatePath` + uncontrolled-input quirk, confirmed harmless via a direct DB read during
+  the flash. No Units row — removed since there's no second unit system to switch to yet.
 
 ## Checklist
 
@@ -34,15 +39,13 @@ The Profile tab: lightweight high-level stats + account/preferences management.
 
 **Settings**
 
-- [x] Edit **handicap** (re-interpolates baseline everywhere — verified stats/dropdown update live).
-- [x] Edit **username** (also now captured at NUX; displayed as the Profile page header, with the
-      Settings field defaulting to the current value). Email edit via `supabase.auth.updateUser({ email })`.
-- [x] **Change password** (`supabase.auth.updateUser({ password })`) — verified: logged out,
-      signed back in with the new password.
-- [x] **Default baseline** picker (My handicap / Tour / Scratch..25) — feeds Feed + Profile stats + the round summary's initial toggle position.
-- [x] **Units** shown as a fixed "Yards & feet" row (metric deferred per the design doc — no
-      functional second option to build a toggle for yet).
-- [x] **Log out** (already existed; still present below settings).
+- [x] **Profile** section: handicap, default baseline, username, email — one "Save changes"
+      button for all four (verified: changed all four in one submit, all persisted).
+- [x] Edit **handicap** re-interpolates baseline everywhere — verified stats/dropdown update live.
+- [x] Edit **username** (also now captured at NUX; displayed as the Profile page header).
+- [x] **Password** section: its own two-field form + "Update password" button — verified: logged
+      out, signed back in with the new password.
+- [x] **Log out** (unchanged, still present below settings).
 
 ## Acceptance criteria
 

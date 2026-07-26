@@ -6,11 +6,8 @@ import { computeCareerStats } from "@/lib/career-stats";
 import { signOutAction } from "@/app/auth/actions";
 import { BigButton } from "@/components/ui/big-button";
 import {
-  DefaultBaselineForm,
-  EmailForm,
-  HandicapForm,
   PasswordForm,
-  UsernameForm,
+  ProfileSettingsForm,
 } from "@/components/profile/settings-forms";
 import type { SgCategory } from "@/lib/sg";
 
@@ -86,29 +83,28 @@ export default async function ProfilePage() {
         )}
       </section>
 
-      {/* Settings */}
+      {/* Profile settings */}
       <section className="mt-6">
-        <h2 className="mb-1 text-sm font-semibold text-muted">Settings</h2>
-        <div className="rounded-app border border-border px-4">
-          {/* Keyed by the current server value so a save re-syncs these
+        <h2 className="mb-1 text-sm font-semibold text-muted">Profile</h2>
+        <div className="rounded-app border border-border p-4">
+          {/* Keyed by the current server values so a save re-syncs these
               uncontrolled fields immediately instead of showing a stale
               value for one render after the server action refresh. */}
-          <HandicapForm key={handicap} handicap={handicap} />
-          <DefaultBaselineForm
-            key={defaultBaseline}
+          <ProfileSettingsForm
+            key={`${handicap}-${defaultBaseline}-${profile?.username}-${user.email}`}
             handicap={handicap}
             defaultBaseline={defaultBaseline}
-          />
-          <UsernameForm
-            key={profile?.username}
             username={profile?.username ?? null}
+            email={user.email ?? ""}
           />
-          <EmailForm key={user.email} email={user.email ?? ""} />
+        </div>
+      </section>
+
+      {/* Password */}
+      <section className="mt-6">
+        <h2 className="mb-1 text-sm font-semibold text-muted">Password</h2>
+        <div className="rounded-app border border-border p-4">
           <PasswordForm />
-          <div className="flex items-center justify-between border-b border-border py-4 last:border-b-0">
-            <span className="text-sm font-semibold text-muted">Units</span>
-            <span className="font-semibold">Yards &amp; feet</span>
-          </div>
         </div>
       </section>
 
