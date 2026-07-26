@@ -117,6 +117,26 @@ export function RoundSummary({
     year: "numeric",
   });
 
+  // Hole-by-hole rows with a running cumulative to-par (through completed holes).
+  const holeRows = holes
+    .filter((h) => h.shots.length > 0)
+    .reduce<
+      {
+        hole: HoleState;
+        hs: ReturnType<typeof holeStrokesGained>;
+        done: boolean;
+        cumToPar: number;
+      }[]
+    >((rows, h) => {
+      const hs = holeStrokesGained(holeShotInputs(h), h.par);
+      const done = isHoleComplete(h);
+      const prev = rows[rows.length - 1];
+      const cumToPar = done
+        ? (prev?.cumToPar ?? 0) + (hs.score - h.par)
+        : (prev?.cumToPar ?? 0);
+      return [...rows, { hole: h, hs, done, cumToPar }];
+    }, []);
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-5 px-5 py-6">
       <header className="flex items-start justify-between">
@@ -219,40 +239,35 @@ export function RoundSummary({
                 <span className="w-16 text-center">Score</span>
                 <span className="w-16 text-right">SG</span>
               </li>
-              {holes.map((h) => {
-                if (h.shots.length === 0) return null;
-                const hs = holeStrokesGained(holeShotInputs(h), h.par);
-                const done = isHoleComplete(h);
-                return (
-                  <li
-                    key={h.holeNumber}
-                    className="flex items-center justify-between border-b border-border py-2 text-sm"
+              {holeRows.map(({ hole: h, hs, done, cumToPar }) => (
+                <li
+                  key={h.holeNumber}
+                  className="flex items-center justify-between border-b border-border py-2 text-sm"
+                >
+                  <span className="w-10 font-semibold">{h.holeNumber}</span>
+                  <span className="w-10 text-center text-muted">{h.par}</span>
+                  <span className="w-16 text-center tabular-nums">
+                    {done ? (
+                      <>
+                        {hs.score}{" "}
+                        <span className="text-muted">
+                          ({fmtToPar(cumToPar)})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "w-16 text-right font-semibold tabular-nums",
+                      hs.total >= 0 ? "text-positive" : "text-negative",
+                    )}
                   >
-                    <span className="w-10 font-semibold">{h.holeNumber}</span>
-                    <span className="w-10 text-center text-muted">{h.par}</span>
-                    <span className="w-16 text-center tabular-nums">
-                      {done ? (
-                        <>
-                          {hs.score}{" "}
-                          <span className="text-muted">
-                            ({fmtToPar(hs.score - h.par)})
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
-                    </span>
-                    <span
-                      className={cn(
-                        "w-16 text-right font-semibold tabular-nums",
-                        hs.total >= 0 ? "text-positive" : "text-negative",
-                      )}
-                    >
-                      {fmtSg(hs.total)}
-                    </span>
-                  </li>
-                );
-              })}
+                    {fmtSg(hs.total)}
+                  </span>
+                </li>
+              ))}
             </ul>
             <p className="mt-2 text-xs text-muted">
               Per-hole SG is shown vs the PGA Tour baseline.
