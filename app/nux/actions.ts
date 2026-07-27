@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { completeOnboarding } from "@/lib/db/queries";
+import { isUniqueViolation } from "@/lib/validation";
 
 export type NuxState = { error?: string };
 
@@ -23,10 +24,17 @@ export async function completeOnboardingAction(
     return { error: "Enter a handicap index between 0 and 54." };
   }
 
-  await completeOnboarding(user.id, {
-    username,
-    handicap: value.toFixed(1),
-    units: "imperial",
-  });
+  try {
+    await completeOnboarding(user.id, {
+      username,
+      handicap: value.toFixed(1),
+      units: "imperial",
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return { error: "That username is already taken." };
+    }
+    throw err;
+  }
   redirect("/feed");
 }

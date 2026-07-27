@@ -1,0 +1,475 @@
+{
+  "id": "295d88f2-f023-48fb-a9d7-992e6d42b4bf",
+  "prevId": "a869089f-69c8-46bd-88ba-4fa01c81dfe1",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.holes": {
+      "name": "holes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "round_id": {
+          "name": "round_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hole_number": {
+          "name": "hole_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "par": {
+          "name": "par",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "holes_round_id_rounds_id_fk": {
+          "name": "holes_round_id_rounds_id_fk",
+          "tableFrom": "holes",
+          "tableTo": "rounds",
+          "columnsFrom": [
+            "round_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "holes_round_hole_number_key": {
+          "name": "holes_round_hole_number_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "round_id",
+            "hole_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "holes_hole_number_check": {
+          "name": "holes_hole_number_check",
+          "value": "\"holes\".\"hole_number\" between 1 and 18"
+        },
+        "holes_par_check": {
+          "name": "holes_par_check",
+          "value": "\"holes\".\"par\" between 3 and 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.profiles": {
+      "name": "profiles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "handicap": {
+          "name": "handicap",
+          "type": "numeric(4, 1)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "units": {
+          "name": "units",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'imperial'"
+        },
+        "default_baseline": {
+          "name": "default_baseline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'handicap'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "profiles_username_lower_idx": {
+          "name": "profiles_username_lower_idx",
+          "columns": [
+            {
+              "expression": "lower(\"username\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"profiles\".\"username\" is not null and \"profiles\".\"username\" <> ''",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rounds": {
+      "name": "rounds",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_uuid": {
+          "name": "client_uuid",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "played_at": {
+          "name": "played_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "num_holes": {
+          "name": "num_holes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "course_name": {
+          "name": "course_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "baseline_snapshot": {
+          "name": "baseline_snapshot",
+          "type": "numeric(4, 1)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "round_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'in_progress'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rounds_user_played_idx": {
+          "name": "rounds_user_played_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "played_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rounds_user_client_uuid_key": {
+          "name": "rounds_user_client_uuid_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "client_uuid"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "rounds_num_holes_check": {
+          "name": "rounds_num_holes_check",
+          "value": "\"rounds\".\"num_holes\" in (9, 18)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.shots": {
+      "name": "shots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hole_id": {
+          "name": "hole_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shot_number": {
+          "name": "shot_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_lie": {
+          "name": "start_lie",
+          "type": "lie",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_distance": {
+          "name": "start_distance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_lie": {
+          "name": "end_lie",
+          "type": "lie",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_distance": {
+          "name": "end_distance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_holed": {
+          "name": "is_holed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "penalty_strokes": {
+          "name": "penalty_strokes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "is_ob": {
+          "name": "is_ob",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "sg_category": {
+          "name": "sg_category",
+          "type": "sg_category",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sg_value": {
+          "name": "sg_value",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "shots_hole_idx": {
+          "name": "shots_hole_idx",
+          "columns": [
+            {
+              "expression": "hole_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "shots_hole_id_holes_id_fk": {
+          "name": "shots_hole_id_holes_id_fk",
+          "tableFrom": "shots",
+          "tableTo": "holes",
+          "columnsFrom": [
+            "hole_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "shots_hole_shot_number_key": {
+          "name": "shots_hole_shot_number_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "hole_id",
+            "shot_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "shots_penalty_check": {
+          "name": "shots_penalty_check",
+          "value": "\"shots\".\"penalty_strokes\" between 0 and 2"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.lie": {
+      "name": "lie",
+      "schema": "public",
+      "values": [
+        "tee",
+        "fairway",
+        "rough",
+        "sand",
+        "recovery",
+        "green"
+      ]
+    },
+    "public.round_status": {
+      "name": "round_status",
+      "schema": "public",
+      "values": [
+        "in_progress",
+        "complete"
+      ]
+    },
+    "public.sg_category": {
+      "name": "sg_category",
+      "schema": "public",
+      "values": [
+        "ott",
+        "app",
+        "arg",
+        "putt"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

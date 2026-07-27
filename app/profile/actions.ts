@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isUniqueViolation, isValidEmail } from "@/lib/validation";
 import {
   updateDefaultBaseline,
   updateHandicap,
@@ -37,12 +38,20 @@ export async function updateProfileAction(
 
   const email = String(formData.get("email") ?? "").trim();
   if (!email) return { error: "Enter an email address." };
+  if (!isValidEmail(email)) return { error: "Enter a valid email address." };
 
   const username = String(formData.get("username") ?? "").trim();
   const baseline = String(formData.get("baseline") ?? "handicap");
 
   await updateHandicap(user.id, handicapValue.toFixed(1));
-  await updateUsername(user.id, username);
+  try {
+    await updateUsername(user.id, username);
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return { error: "That username is already taken." };
+    }
+    throw err;
+  }
   await updateDefaultBaseline(user.id, baseline);
 
   if (email !== user.email) {

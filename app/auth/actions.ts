@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isValidEmail } from "@/lib/validation";
 
 export type AuthState = { error?: string; message?: string };
 
@@ -33,6 +34,9 @@ export async function signUpAction(
   const { email, password } = readCredentials(formData);
   if (!email || !password) {
     return { error: "Enter your email and password." };
+  }
+  if (!isValidEmail(email)) {
+    return { error: "Enter a valid email address." };
   }
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters." };

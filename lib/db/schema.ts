@@ -8,6 +8,7 @@ import {
   boolean,
   timestamp,
   unique,
+  uniqueIndex,
   check,
   index,
 } from "drizzle-orm/pg-core";
@@ -56,18 +57,28 @@ const timestamps = {
 };
 
 // --- Profiles (1:1 with auth.users) ------------------------------------------
-export const profiles = pgTable("profiles", {
-  // Equals auth.users.id — FK added in the companion SQL migration.
-  id: uuid("id").primaryKey(),
-  username: text("username"),
-  // e.g. 12.4; interpolated for baselines between the 5-stroke brackets.
-  handicap: numeric("handicap", { precision: 4, scale: 1 }),
-  // 'imperial' (yd/ft) | 'metric' (m) — metric deferred.
-  units: text("units").notNull().default("imperial"),
-  // 'handicap' (use my interpolated handicap) | 'tour' | '0'|'5'|...|'25'
-  defaultBaseline: text("default_baseline").notNull().default("handicap"),
-  ...timestamps,
-});
+export const profiles = pgTable(
+  "profiles",
+  {
+    // Equals auth.users.id — FK added in the companion SQL migration.
+    id: uuid("id").primaryKey(),
+    username: text("username"),
+    // e.g. 12.4; interpolated for baselines between the 5-stroke brackets.
+    handicap: numeric("handicap", { precision: 4, scale: 1 }),
+    // 'imperial' (yd/ft) | 'metric' (m) — metric deferred.
+    units: text("units").notNull().default("imperial"),
+    // 'handicap' (use my interpolated handicap) | 'tour' | '0'|'5'|...|'25'
+    defaultBaseline: text("default_baseline").notNull().default("handicap"),
+    ...timestamps,
+  },
+  (t) => [
+    // Case-insensitive uniqueness; blank/null usernames are excluded so
+    // multiple users can leave it unset without colliding.
+    uniqueIndex("profiles_username_lower_idx")
+      .on(sql`lower(${t.username})`)
+      .where(sql`${t.username} is not null and ${t.username} <> ''`),
+  ],
+);
 
 // --- Rounds ------------------------------------------------------------------
 export const rounds = pgTable(

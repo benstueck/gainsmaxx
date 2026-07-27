@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "profiles_username_lower_idx" ON "profiles" USING btree (lower("username")) WHERE "profiles"."username" is not null and "profiles"."username" <> '';
