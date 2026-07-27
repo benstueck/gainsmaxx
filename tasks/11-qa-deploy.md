@@ -84,16 +84,18 @@ Fixed by:
 Re-verified on a real iPhone: force-quit-while-offline now correctly relaunches into Feed (which
 was cached from normal use) and the in-progress round reopens fine from there.
 
-**Follow-up bug found in the same pass:** tapping the "+" tab while offline (starting a round
-needs a DB round to be created, so it can't work offline) landed on `/~offline` as expected, but
-its **"Resume round" button did nothing** — stuck, no way to navigate anywhere. Cause: "+" is a
-`next/link` client-side transition from an already-mounted page; the RSC fetch fails offline and
-Next's client router swallows it rather than hard-reloading, so by the time `/~offline` renders,
-it's already inside a client-side navigation context — and the "Resume round" link was *also* a
-`next/link`, so clicking it attempted another soft transition that failed the same way. Fixed by
-making that link a plain `<a href>` instead of `next/link`'s `Link`, forcing a real browser
-navigation, which the service worker can serve from its own page cache (the round page was
-genuinely visited before going offline). Re-verify on the phone after this redeploys.
+**Follow-up bug found in the same pass, then redesigned rather than patched further:** tapping
+the "+" tab while offline (starting a round needs a DB round to be created, so it can't work
+offline) landed on `/~offline`, whose "Resume round" button turned out to be the wrong shape for
+the problem entirely — the user already can (and does) resume an in-progress round from the Feed,
+so routing them through a fallback page to get back to the same place was redundant, and it kept
+breaking in new ways (a `next/link` inside an already-broken client-side navigation context
+doing nothing on tap). Redesigned instead: `components/shell/tab-bar.tsx` now checks
+`navigator.onLine` before letting the "+" tab navigate at all, and shows a small in-app modal
+("Starting a new round needs a connection...") instead of navigating when offline — the user
+never leaves Feed (or wherever they were), so there's nothing to recover from. `/~offline` is
+back to being a plain static dead-end page, kept only as a last resort for a direct/bookmarked
+link to a page with no cached copy at all; the common path no longer reaches it.
 
 ## Acceptance criteria
 
