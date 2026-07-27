@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
-import { X, Undo2, Flag, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  X,
+  Undo2,
+  Flag,
+  ChevronLeft,
+  ChevronRight,
+  WifiOff,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BigButton } from "@/components/ui/big-button";
 import { NumericKeypad } from "@/components/round/numeric-keypad";
@@ -23,6 +30,19 @@ import {
   type Lie,
 } from "@/lib/sg";
 import { finishRound, saveRound } from "@/app/round/actions";
+import { getDraft, putDraft, clearDraft } from "@/lib/offline/round-sync";
+
+/** Next.js encodes a successful redirect() as a thrown "NEXT_REDIRECT" digest
+ *  rather than a normal return — distinguish that from a real sync failure. */
+function isRedirectError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "digest" in err &&
+    typeof (err as { digest?: unknown }).digest === "string" &&
+    (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
 
 const END_LIES: Lie[] = ["fairway", "rough", "sand", "recovery", "green"];
 const LIE_LABEL: Record<Lie, string> = {
@@ -63,7 +83,8 @@ type Action =
   | { type: "editShot"; index: number }
   | { type: "deleteShot"; index: number }
   | { type: "nextHole"; numHoles: number }
-  | { type: "goToHole"; index: number };
+  | { type: "goToHole"; index: number }
+  | { type: "restoreHoles"; holes: HoleState[] };
 
 function withHole(state: State, fn: (h: HoleState) => HoleState): State {
   const holes = state.holes.slice();
@@ -215,6 +236,13 @@ function reducer(state: State, action: Action): State {
       return { ...state, current: action.index, draft: EMPTY_DRAFT };
     }
 
+    case "restoreHoles":
+      return {
+        holes: action.holes,
+        current: firstIncomplete(action.holes),
+        draft: EMPTY_DRAFT,
+      };
+
     default:
       return state;
   }
@@ -245,6 +273,10 @@ export function RoundSession({
     draft: EMPTY_DRAFT,
   });
   const [finishing, setFinishing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"synced" | "saving" | "offline">(
+    "synced",
+  );
+  const [offlineFinishQueued, setOfflineFinishQueued] = useState(false);
 
   const baseline: Baseline = handicap ?? "tour";
   const hole = state.holes[state.current];
@@ -270,6 +302,67 @@ export function RoundSession({
     [state.holes, baseline],
   );
 
+  // Local-first save: try Supabase, and if that fails (offline or a
+  // transient error) queue the state in IndexedDB instead of losing it.
+  async function attemptSave(holes: HoleState[]): Promise<boolean> {
+    try {
+      await saveRound(roundId, holes);
+      await clearDraft(roundId);
+      setSyncStatus("synced");
+      return true;
+    } catch {
+      await putDraft(roundId, holes, false);
+      setSyncStatus("offline");
+      return false;
+    }
+  }
+
+  // Same idea for Finish — a queued Finish is retried (from a live, mounted
+  // session) until it actually reaches the server, at which point its
+  // redirect to the summary fires normally.
+  async function attemptFinish(holes: HoleState[]): Promise<boolean> {
+    await putDraft(roundId, holes, true);
+    setOfflineFinishQueued(true);
+    try {
+      await finishRound(roundId, holes);
+      await clearDraft(roundId);
+      setOfflineFinishQueued(false);
+      setSyncStatus("synced");
+      return true;
+    } catch (err) {
+      if (isRedirectError(err)) {
+        // finishRound succeeded — Next just encodes that as a thrown redirect
+        // rather than a normal return, so the two lines above never ran.
+        await clearDraft(roundId);
+        setOfflineFinishQueued(false);
+        setSyncStatus("synced");
+        return true;
+      }
+      setSyncStatus("offline");
+      return false;
+    }
+  }
+
+  // On mount, a leftover local draft (from a sync that never succeeded, e.g.
+  // the page reloaded while offline) takes priority over the server's copy —
+  // it's strictly newer, since it only exists because a push already failed.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const draft = await getDraft(roundId);
+      if (cancelled || !draft) return;
+      dispatch({ type: "restoreHoles", holes: draft.holes });
+      setSyncStatus("saving");
+      if (draft.wantsFinish) await attemptFinish(draft.holes);
+      else await attemptSave(draft.holes);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once per mounted session (roundId is stable for its lifetime).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Debounced autosave of the in-progress round.
   const mounted = useRef(false);
   useEffect(() => {
@@ -277,11 +370,28 @@ export function RoundSession({
       mounted.current = true;
       return;
     }
+    const holesSnapshot = state.holes;
     const t = setTimeout(() => {
-      void saveRound(roundId, state.holes);
+      setSyncStatus("saving");
+      void attemptSave(holesSnapshot);
     }, 1000);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.holes, roundId]);
+
+  // Retry whatever's queued the moment connectivity returns.
+  useEffect(() => {
+    async function retry() {
+      const draft = await getDraft(roundId);
+      if (!draft) return;
+      setSyncStatus("saving");
+      if (draft.wantsFinish) await attemptFinish(draft.holes);
+      else await attemptSave(draft.holes);
+    }
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundId]);
 
   const canGoBack = state.current > 0;
   const canGoForward = state.current < state.holes.length - 1;
@@ -293,11 +403,10 @@ export function RoundSession({
 
   async function onFinish() {
     setFinishing(true);
-    try {
-      await finishRound(roundId, state.holes);
-    } catch {
-      setFinishing(false);
-    }
+    const ok = await attemptFinish(state.holes);
+    if (!ok) setFinishing(false);
+    // On success the redirect is already underway; leave `finishing` true
+    // until the component unmounts.
   }
 
   return (
@@ -324,7 +433,15 @@ export function RoundSession({
               Hole {hole.holeNumber} of {numHoles}
             </div>
             <div className="text-xs text-muted">
-              Round SG {fmtSg(round.total)} · {round.score} strokes
+              {syncStatus === "offline" ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-negative">
+                  <WifiOff size={12} /> Offline — saved locally
+                </span>
+              ) : syncStatus === "saving" ? (
+                "Saving…"
+              ) : (
+                `Round SG ${fmtSg(round.total)} · ${round.score} strokes`
+              )}
             </div>
           </div>
           <button
@@ -459,6 +576,12 @@ export function RoundSession({
             <p className="text-center font-semibold">
               Hole complete — {holeSg.score} strokes, SG {fmtSg(holeSg.total)}
             </p>
+            {isLastHole && offlineFinishQueued && (
+              <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-negative">
+                <WifiOff size={14} /> Offline — will finish syncing once
+                you&rsquo;re back online.
+              </p>
+            )}
             <div className="flex gap-2">
               <BigButton
                 variant="secondary"

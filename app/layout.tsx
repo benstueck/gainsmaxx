@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,10 +17,20 @@ export const metadata: Metadata = {
   title: "Gainsmaxxing",
   description: "Track strokes gained shot-by-shot during your round.",
   applicationName: "Gainsmaxxing",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     title: "Gainsmaxxing",
     statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
   },
 };
 
@@ -41,7 +52,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <RegisterServiceWorker />
+        {children}
+      </body>
     </html>
   );
 }

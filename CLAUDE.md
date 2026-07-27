@@ -49,13 +49,28 @@ the session editor; deleting a shot mid-hole re-chains automatically (derived st
 summary has **Edit round** / **Delete round** actions (`deleteRound` in `app/round/actions.ts`).
 
 **Milestone 9 done (verified):** Profile tab (`app/(app)/profile/page.tsx`) — career stats
-(`lib/career-stats.ts`: rounds played, avg total SG, avg per-category) + editable settings
-(`components/profile/settings-forms.tsx`, actions in `app/profile/actions.ts`): handicap,
-username, email, password, and a **default baseline** preference. `lib/baseline.ts` centralizes
-baseline resolution/options so Feed, Profile stats, and the round summary toggle agree; settings
-forms are keyed by their current server value so a save re-syncs the field instantly instead of
-flashing stale for a render (a `revalidatePath` + uncontrolled-input quirk).
-Next up: Milestone 10 (offline-first PWA). See `tasks/`.
+(`lib/career-stats.ts`: rounds played, avg total SG, avg per-category) + editable settings.
+`lib/baseline.ts` centralizes baseline resolution/options so Feed, Profile stats, and the round
+summary toggle agree. Settings landed as **two sections, one Save button each** — `ProfileSettingsForm`
+(handicap, default baseline, username, email) and `PasswordForm` — after a per-field-button design
+and then a per-field-autosave-on-blur design were both tried and rejected (autosave didn't feel
+right on mobile web). The combined form is still keyed by its current server values so a save
+re-syncs the (uncontrolled) fields instantly instead of flashing stale for a render.
+
+**Milestone 10 done (verified):** offline-first tracking + PWA shell. Service worker via
+`@serwist/turbopack` (**not** `@serwist/next` — webpack-only, hard-errors under Next 16's default
+Turbopack builder) served through `app/serwist/[path]/route.ts`, which bundles `app/sw.ts` with
+esbuild at request time; manual registration in `components/pwa/register-service-worker.tsx`
+(`scope: "/"` is required explicitly — the response's `Service-Worker-Allowed` header only
+*permits* widening scope, doesn't do it automatically). `lib/offline/` (Dexie `roundDrafts` table
++ `round-sync.ts`) makes the tracking session local-first: every autosave and Finish tries the
+existing server action first and only queues locally on failure, retrying on the `online` event
+or on next mount. **Scope note:** signal dropping *mid-round* is covered (verified: a full offline
+18-hole round + offline Finish + reload-recovers-a-queued-draft, all confirmed against the live
+DB); starting a brand-new round still needs connectivity. See `tasks/10-offline-pwa.md` for the
+full verification writeup and a real bug caught during testing (`attemptFinish` wasn't clearing
+the local draft on the redirect-success path).
+Next up: Milestone 11 (QA + deploy to Vercel). See `tasks/`.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)
@@ -164,6 +179,11 @@ npm run db:studio        # drizzle studio
 
 Env: copy `.env.example` → `.env.local`. Without Supabase env vars the app still runs (the
 `proxy.ts` session step no-ops); DB-backed features need them.
+
+**PWA/offline testing:** the service worker only runs against a real build — `npm run build &&
+npm run start`, then hit `:3000` (not `npm run dev`; nothing disables it there, there's just no
+reason to pay SW cache churn on every HMR reload). Test in a single tab: multiple tabs on the
+same origin race each other's SW install/activate lifecycle.
 
 ## Workflow: plans & tasks
 
