@@ -46,14 +46,43 @@ the edit form appeared, saved correctly, shot 2 re-chained its start to the new 
 total SG stayed internally consistent (+0.99), and the change persisted to Supabase exactly as
 shown on screen.
 
-## Deploy — not started
+## Deploy — mostly done
 
-- [ ] Decide: reuse the existing Supabase project as production (it already holds real user
-      accounts — see `tasks/README.md` "Blocked-on-user") vs. provision a separate one.
-- [ ] Deploy to **Vercel**; wire env vars (`NEXT_PUBLIC_SUPABASE_URL`,
-      `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`, `DIRECT_URL`).
-- [ ] Verify PWA install + offline on the deployed URL from a real phone.
-- [ ] Update `CLAUDE.md` (status, deploy notes, live URL if applicable).
+- [x] Decided: reuse the existing Supabase project as production.
+- [x] Deployed to **Vercel** (`bens-projects-3790fb25/gainsmaxxing`) via CLI; all four env vars
+      (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`,
+      `DIRECT_URL`) set for Production. Live at **https://gainsmaxxing.benstueck.com** (custom
+      domain, CNAME verified, valid TLS) and https://gainsmaxxing.vercel.app. GitHub repo
+      connected for auto-deploy-on-push to `main`.
+- [x] Verify PWA install + offline on the deployed URL from a real phone — found and fixed a
+      real bug (below); needs a re-test after the fix.
+- [ ] Update `CLAUDE.md` (status, deploy notes, live URL).
+
+### Bug found and fixed during real-device offline testing
+
+**Force-quitting the installed PWA while offline mid-round, then reopening it, landed on a dead
+"you're offline" page with no way back into the in-progress round.** Root cause: the PWA manifest's
+`start_url` is `/feed`, and iOS relaunches an installed home-screen app at `start_url`, not at
+whatever page was last open. The service worker's runtime cache only holds pages that were
+actually *visited* over the network — so if `/feed` was never loaded in that session (e.g. the
+user went straight from login into "+" → new round), it has no cached copy, the offline
+navigation fails, and Serwist's `fallbacks` config serves the static `/~offline` page — which,
+before this fix, was a dead end even though the in-progress round's own page (visited before
+going offline) was sitting right there in the cache.
+
+Fixed by:
+
+- `components/pwa/register-service-worker.tsx`: now also calls `flushAllDrafts()` once on mount
+  and again on every `online` event — this was previously dead code (defined in
+  `lib/offline/round-sync.ts`, never called anywhere), so a draft queued for a round the user
+  didn't reopen would never sync until they happened to revisit that exact round page.
+- `app/~offline/page.tsx`: no longer a purely static dead end — on load it checks the local
+  Dexie `roundDrafts` table (still precached/static at build time; only the client-side check is
+  dynamic) and, if a draft exists, shows a **"Resume round"** link straight to `/round/{roundId}`,
+  which loads from the SW cache since that page was genuinely visited before going offline.
+
+Not yet re-verified on a real device — needs a redeploy + repeat of the force-quit-while-offline
+test.
 
 ## Acceptance criteria
 
