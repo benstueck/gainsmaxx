@@ -239,6 +239,8 @@ export function RoundSummary({
             </div>
           </section>
 
+          <AdvancedStatsSection buckets={bucketTotals} valueLabel="Total SG" />
+
           {/* Hole by hole */}
           <section>
             <h2 className="mb-2 text-sm font-semibold text-muted">
@@ -285,8 +287,6 @@ export function RoundSummary({
               Per-hole SG is shown vs the PGA Tour baseline.
             </p>
           </section>
-
-          <AdvancedStatsSection buckets={bucketTotals} valueLabel="Total SG" />
         </>
       )}
 

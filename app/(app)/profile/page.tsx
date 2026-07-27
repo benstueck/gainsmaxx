@@ -93,7 +93,12 @@ export default async function ProfilePage() {
       </section>
 
       {stats.roundsPlayed > 0 && (
-        <AdvancedStatsSection buckets={bucketTotals} valueLabel="Avg SG / 18" />
+        <div className="mt-6">
+          <AdvancedStatsSection
+            buckets={bucketTotals}
+            valueLabel="Avg SG / 18"
+          />
+        </div>
       )}
 
       {/* Profile settings */}
