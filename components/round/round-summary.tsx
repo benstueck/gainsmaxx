@@ -269,6 +269,7 @@ export function RoundSummary({
         {status === "in_progress" ? (
           <GuardedLink
             href={`/round/${roundId}`}
+            skipGuard
             className="flex min-h-tap items-center justify-center rounded-app bg-primary px-6 text-lg font-semibold text-primary-foreground"
           >
             Continue round
