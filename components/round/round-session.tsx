@@ -18,6 +18,7 @@ import {
   isHoleComplete,
   makeHole,
   nextStart,
+  startForIndex,
   unitFor,
   type HoleState,
   type ShotEnd,
@@ -137,7 +138,10 @@ function reducer(state: State, action: Action): State {
       };
 
     case "addShot": {
-      const start = nextStart(hole);
+      const start =
+        state.draft.editing != null
+          ? startForIndex(hole, state.draft.editing)
+          : nextStart(hole);
       if (!start) return state;
       const endLie = start.lie === "green" ? "green" : state.draft.endLie;
       const dist = Number(state.draft.distance);
@@ -160,7 +164,10 @@ function reducer(state: State, action: Action): State {
     }
 
     case "holeOut": {
-      const start = nextStart(hole);
+      const start =
+        state.draft.editing != null
+          ? startForIndex(hole, state.draft.editing)
+          : nextStart(hole);
       if (!start) return state;
       const shot: ShotEnd = {
         endLie: null,
@@ -280,7 +287,10 @@ export function RoundSession({
 
   const baseline: Baseline = handicap ?? "tour";
   const hole = state.holes[state.current];
-  const start = nextStart(hole);
+  const start =
+    state.draft.editing != null
+      ? startForIndex(hole, state.draft.editing)
+      : nextStart(hole);
   const complete = isHoleComplete(hole);
   const isLastHole = hole.holeNumber >= numHoles;
 
@@ -473,6 +483,8 @@ export function RoundSession({
           <button
             key={p}
             type="button"
+            aria-label={`Par ${p}`}
+            aria-pressed={hole.par === p}
             onClick={() => dispatch({ type: "setPar", par: p })}
             className={cn(
               "flex h-11 flex-1 items-center justify-center rounded-app text-lg font-bold",
@@ -571,7 +583,7 @@ export function RoundSession({
             onBackspace={() => dispatch({ type: "backspace" })}
             onSet={() => dispatch({ type: "setLength" })}
           />
-        ) : complete ? (
+        ) : complete && state.draft.editing == null ? (
           <div className="flex flex-col gap-3 pb-3">
             <p className="text-center font-semibold">
               Hole complete — {holeSg.score} strokes, SG {fmtSg(holeSg.total)}

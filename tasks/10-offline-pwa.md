@@ -21,6 +21,7 @@ minimal instead of a full client-rendered-everything rewrite.
 ## What landed
 
 **PWA**
+
 - `next.config.ts` + `app/serwist/[path]/route.ts` (`@serwist/turbopack`, **not** `@serwist/next`
   — the latter is webpack-only and hard-errors under Next 16's default Turbopack builder for both
   dev and build). The route bundles `app/sw.ts` with esbuild at request time and serves it with
@@ -30,17 +31,18 @@ minimal instead of a full client-rendered-everything rewrite.
   precached via `additionalPrecacheEntries` in the route) for routes never visited before going
   offline.
 - `components/pwa/register-service-worker.tsx` — manual `navigator.serviceWorker.register(
-  "/serwist/sw.js", { scope: "/" })`; `@serwist/turbopack` doesn't auto-inject registration like
+"/serwist/sw.js", { scope: "/" })`; `@serwist/turbopack` doesn't auto-inject registration like
   `@serwist/next` did, and the explicit `scope: "/"` is required (the SW's own directory is the
-  default scope; the response header only *permits* widening it, doesn't do so automatically).
+  default scope; the response header only _permits_ widening it, doesn't do so automatically).
 - `public/manifest.webmanifest` + `scripts/gen-pwa-icons.mjs` (dependency-free 192/512 PNG
   placeholders — swap for real branded icons later) + `metadata.manifest`/`icons` in `app/layout.tsx`.
 - `tsconfig.worker.json` (separate `lib: ["esnext","webworker"]` project) since `app/sw.ts` needs
   worker globals the main DOM-flavored tsconfig doesn't have; wired into `npm run typecheck`.
 
 **Local-first sync**
+
 - `lib/offline/db.ts` — Dexie table `roundDrafts` keyed by `roundId`. A draft only exists when a
-  sync has *failed*; it's deleted the moment one succeeds, so there's never a second long-lived
+  sync has _failed_; it's deleted the moment one succeeds, so there's never a second long-lived
   copy to reconcile.
 - `lib/offline/round-sync.ts` — `getDraft`/`putDraft`/`clearDraft` + `flushAllDrafts` (safety net
   for plain-save drafts left over from another tab; a queued Finish is deliberately excluded —
@@ -81,6 +83,7 @@ minimal instead of a full client-rendered-everything rewrite.
       matters.
 
 ## Acceptance criteria — all verified live (production build, `window.fetch` patched to reject
+
 to simulate offline, since this sandbox has no true network-level offline toggle)
 
 - [x] **Offline → complete a full 18-hole round → reconnect → all data syncs, no loss.** Played
@@ -110,7 +113,7 @@ to simulate offline, since this sandbox has no true network-level offline toggle
   and will produce confusing intermediate states).
 - If you ever see a stale chunk hash being served after a rebuild, check for an **orphaned
   `next-server` process** still bound to port 3000 from a previous `npm run start` — `pkill -f
-  "next start"` does not match the actual `next-server` process name. Use `lsof -i :3000` and
+"next start"` does not match the actual `next-server` process name. Use `lsof -i :3000` and
   kill the PID directly.
 - The two source-data-adjacent scope items intentionally deferred: offline **round creation** and
   **cross-device reconciliation**. Revisit only if a real usage pattern demands them.

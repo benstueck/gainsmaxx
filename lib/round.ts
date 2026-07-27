@@ -60,6 +60,28 @@ export function nextStart(
   return { lie, distance };
 }
 
+/**
+ * The start position for the shot at `index` — chains from Tee through the
+ * PRECEDING shots' ends only, so it works for editing an earlier shot even
+ * after the hole is already complete (unlike nextStart, which is only for
+ * appending a brand-new shot and returns null once the hole is holed out).
+ */
+export function startForIndex(
+  hole: HoleState,
+  index: number,
+): { lie: Lie; distance: number } | null {
+  if (hole.length == null) return null;
+  let lie: Lie = "tee";
+  let distance = hole.length;
+  for (let i = 0; i < index; i++) {
+    const s = hole.shots[i];
+    if (!s || s.isHoled || s.endLie == null || s.endDistance == null) break;
+    lie = s.endLie;
+    distance = s.endDistance;
+  }
+  return { lie, distance };
+}
+
 /** Derive the engine ShotInput[] for a hole by chaining starts through ends. */
 export function holeShotInputs(hole: HoleState): ShotInput[] {
   const inputs: ShotInput[] = [];

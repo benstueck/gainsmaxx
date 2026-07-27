@@ -62,15 +62,21 @@ re-syncs the (uncontrolled) fields instantly instead of flashing stale for a ren
 Turbopack builder) served through `app/serwist/[path]/route.ts`, which bundles `app/sw.ts` with
 esbuild at request time; manual registration in `components/pwa/register-service-worker.tsx`
 (`scope: "/"` is required explicitly — the response's `Service-Worker-Allowed` header only
-*permits* widening scope, doesn't do it automatically). `lib/offline/` (Dexie `roundDrafts` table
-+ `round-sync.ts`) makes the tracking session local-first: every autosave and Finish tries the
-existing server action first and only queues locally on failure, retrying on the `online` event
-or on next mount. **Scope note:** signal dropping *mid-round* is covered (verified: a full offline
-18-hole round + offline Finish + reload-recovers-a-queued-draft, all confirmed against the live
-DB); starting a brand-new round still needs connectivity. See `tasks/10-offline-pwa.md` for the
-full verification writeup and a real bug caught during testing (`attemptFinish` wasn't clearing
-the local draft on the redirect-success path).
-Next up: Milestone 11 (QA + deploy to Vercel). See `tasks/`.
+_permits_ widening scope, doesn't do it automatically). `lib/offline/` (Dexie `roundDrafts` table
+
+- `round-sync.ts`) makes the tracking session local-first: every autosave and Finish tries the
+  existing server action first and only queues locally on failure, retrying on the `online` event
+  or on next mount. **Scope note:** signal dropping _mid-round_ is covered (verified: a full offline
+  18-hole round + offline Finish + reload-recovers-a-queued-draft, all confirmed against the live
+  DB); starting a brand-new round still needs connectivity. See `tasks/10-offline-pwa.md` for the
+  full verification writeup and a real bug caught during testing (`attemptFinish` wasn't clearing
+  the local draft on the redirect-success path).
+
+**Milestone 11 in progress:** QA pass done (fresh-account e2e, RLS/isolation via a second real
+account, mobile viewport). Found and fixed a real bug: editing an earlier shot after its hole was
+already holed out silently failed (`lib/round.ts`'s new `startForIndex` fixes it — see
+`tasks/11-qa-deploy.md`). Deploy to Vercel not started; needs a decision on whether to reuse the
+existing (live, real-user) Supabase project as production or provision a separate one.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)
