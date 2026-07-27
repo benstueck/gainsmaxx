@@ -34,7 +34,7 @@ const serwist = new Serwist({
 serwist.setCatchHandler(async ({ request }) => {
   if (request.destination === "document") {
     return new Response(
-      "<!doctype html><meta charset=utf-8><meta name=viewport content=width=device-width,initial-scale=1><body style=\"font:16px system-ui;text-align:center;padding:4rem 1.5rem;color:#111\">You&rsquo;re offline and this page hasn&rsquo;t loaded before.</body>",
+      '<!doctype html><meta charset=utf-8><meta name=viewport content=width=device-width,initial-scale=1><body style="font:16px system-ui;text-align:center;padding:4rem 1.5rem;color:#111">You&rsquo;re offline and this page hasn&rsquo;t loaded before.</body>',
       { status: 503, headers: { "Content-Type": "text/html" } },
     );
   }

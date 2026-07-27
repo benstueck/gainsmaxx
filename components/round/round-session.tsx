@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { GuardedLink } from "@/components/shell/guarded-link";
 import {
   X,
@@ -12,6 +19,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BigButton } from "@/components/ui/big-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
+import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
 import { NumericKeypad } from "@/components/round/numeric-keypad";
 import {
   holeShotInputs,
@@ -30,7 +40,7 @@ import {
   type Baseline,
   type Lie,
 } from "@/lib/sg";
-import { finishRound, saveRound } from "@/app/round/actions";
+import { deleteRound, finishRound, saveRound } from "@/app/round/actions";
 import { getDraft, putDraft, clearDraft } from "@/lib/offline/round-sync";
 
 /** Next.js encodes a successful redirect() as a thrown "NEXT_REDIRECT" digest
@@ -280,6 +290,9 @@ export function RoundSession({
     draft: EMPTY_DRAFT,
   });
   const [finishing, setFinishing] = useState(false);
+  const [discarding, startDiscard] = useTransition();
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const discardGuard = useOfflineGuard();
   const [syncStatus, setSyncStatus] = useState<"synced" | "saving" | "offline">(
     "synced",
   );
@@ -419,309 +432,337 @@ export function RoundSession({
     // until the component unmounts.
   }
 
+  function onConfirmDiscard() {
+    startDiscard(() => {
+      void clearDraft(roundId);
+      void deleteRound(roundId);
+    });
+  }
+
   return (
-    <div className="flex min-h-full flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        {/* Exiting is always safe offline — everything is already saved
+    <>
+      <div className="flex min-h-full flex-col">
+        {/* Header */}
+        <header className="flex items-center justify-between border-b border-border px-4 py-3">
+          {/* Exiting is always safe offline — everything is already saved
             locally, and Feed is the app's home base (always loaded on
             launch), so there's nothing to block here. */}
-        <GuardedLink
-          href="/feed"
-          aria-label="Exit round"
-          skipGuard
-          className="p-2 text-muted"
-        >
-          <X size={24} />
-        </GuardedLink>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label="Previous hole"
-            disabled={!canGoBack}
-            onClick={() =>
-              dispatch({ type: "goToHole", index: state.current - 1 })
-            }
-            className="p-1 text-muted disabled:opacity-25"
+          <GuardedLink
+            href="/feed"
+            aria-label="Exit round"
+            skipGuard
+            className="p-2 text-muted"
           >
-            <ChevronLeft size={22} />
-          </button>
-          <div className="text-center">
-            <div className="text-sm font-semibold">
-              Hole {hole.holeNumber} of {numHoles}
-            </div>
-            <div className="text-xs text-muted">
-              {syncStatus === "offline" ? (
-                <span className="inline-flex items-center gap-1 font-semibold text-negative">
-                  <WifiOff size={12} /> Offline — saved locally
-                </span>
-              ) : syncStatus === "saving" ? (
-                "Saving…"
-              ) : (
-                `Round SG ${fmtSg(round.total)} · ${round.score} strokes`
-              )}
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-label="Next hole"
-            disabled={!canGoForward}
-            onClick={() =>
-              dispatch({ type: "goToHole", index: state.current + 1 })
-            }
-            className="p-1 text-muted disabled:opacity-25"
-          >
-            <ChevronRight size={22} />
-          </button>
-        </div>
-        {/* Spacer to balance the exit button so hole nav stays centered.
-            Finishing early isn't offered — the round isn't done being
-            tracked until the last hole is holed out (see "Finish round"
-            in the entry dock below), so partial-round SG never leaks into
-            a saved round. */}
-        <span className="w-9" aria-hidden />
-      </header>
-
-      {/* Par selector */}
-      <div className="flex items-center gap-2 px-4 py-3">
-        <span className="text-sm font-medium text-muted">Par</span>
-        {[3, 4, 5].map((p) => (
-          <button
-            key={p}
-            type="button"
-            aria-label={`Par ${p}`}
-            aria-pressed={hole.par === p}
-            onClick={() => dispatch({ type: "setPar", par: p })}
-            className={cn(
-              "flex h-11 flex-1 items-center justify-center rounded-app text-lg font-bold",
-              hole.par === p
-                ? "bg-primary text-primary-foreground"
-                : "bg-surface text-foreground",
-            )}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-
-      {/* Shot list */}
-      <div className="flex-1 overflow-y-auto px-4">
-        {inputs.length === 0 && hole.length != null && (
-          <p className="py-6 text-center text-sm text-muted">
-            Tee shot from {hole.length} yd — where did it end up?
-          </p>
-        )}
-        <ul className="flex flex-col gap-2 py-2">
-          {inputs.map((si, i) => {
-            const editable = !state.holes[state.current].shots[i]?.isHoled;
-            const sg = results[i].sg;
-            return (
-              <li key={i}>
-                <button
-                  type="button"
-                  disabled={!editable}
-                  onClick={() => dispatch({ type: "editShot", index: i })}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-app border border-border px-3 py-2 text-left",
-                    state.draft.editing === i && "border-primary",
-                    editable ? "active:bg-surface" : "opacity-90",
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="w-5 text-sm font-bold text-muted">
-                      {i + 1}
-                    </span>
-                    <span className="text-sm">
-                      {LIE_LABEL[si.startLie]} {si.startDistance}
-                      {unitFor(si.startLie)}
-                      <span className="mx-1 text-muted">→</span>
-                      {si.isHoled ? (
-                        <span className="font-semibold text-primary">
-                          Holed
-                        </span>
-                      ) : (
-                        <>
-                          {LIE_LABEL[si.endLie as Lie]} {si.endDistance}
-                          {unitFor(si.endLie as Lie)}
-                        </>
-                      )}
-                      {si.penaltyStrokes > 0 && (
-                        <span className="ml-1 rounded bg-negative/10 px-1 text-xs font-semibold text-negative">
-                          {si.penaltyStrokes === 2 ? "OB" : "PEN"}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      "text-sm font-semibold tabular-nums",
-                      sg >= 0 ? "text-positive" : "text-negative",
-                    )}
-                  >
-                    {fmtSg(sg)}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        {inputs.length > 0 && (
-          <div className="flex justify-between border-t border-border py-2 text-sm font-semibold">
-            <span>
-              {holeSg.score} strokes ({holeSg.score - hole.par >= 0 ? "+" : ""}
-              {holeSg.score - hole.par})
-            </span>
-            <span
-              className={holeSg.total >= 0 ? "text-positive" : "text-negative"}
+            <X size={24} />
+          </GuardedLink>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Previous hole"
+              disabled={!canGoBack}
+              onClick={() =>
+                dispatch({ type: "goToHole", index: state.current - 1 })
+              }
+              className="p-1 text-muted disabled:opacity-25"
             >
-              Hole SG {fmtSg(holeSg.total)}
-            </span>
+              <ChevronLeft size={22} />
+            </button>
+            <div className="text-center">
+              <div className="text-sm font-semibold">
+                Hole {hole.holeNumber} of {numHoles}
+              </div>
+              <div className="text-xs text-muted">
+                {syncStatus === "offline" ? (
+                  <span className="inline-flex items-center gap-1 font-semibold text-negative">
+                    <WifiOff size={12} /> Offline — saved locally
+                  </span>
+                ) : syncStatus === "saving" ? (
+                  "Saving…"
+                ) : (
+                  `Round SG ${fmtSg(round.total)} · ${round.score} strokes`
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Next hole"
+              disabled={!canGoForward}
+              onClick={() =>
+                dispatch({ type: "goToHole", index: state.current + 1 })
+              }
+              className="p-1 text-muted disabled:opacity-25"
+            >
+              <ChevronRight size={22} />
+            </button>
           </div>
-        )}
-      </div>
+          <button
+            type="button"
+            onClick={() => discardGuard.guard(() => setConfirmingDiscard(true))}
+            className="p-2 text-sm font-semibold text-negative"
+          >
+            Discard
+          </button>
+        </header>
 
-      {/* Entry dock */}
-      <div className="shrink-0 border-t border-border bg-background px-4 pb-safe pt-3">
-        {hole.length == null ? (
-          <LengthEntry
-            value={state.draft.distance}
-            onDigit={(d) => dispatch({ type: "digit", d })}
-            onBackspace={() => dispatch({ type: "backspace" })}
-            onSet={() => dispatch({ type: "setLength" })}
-          />
-        ) : complete && state.draft.editing == null ? (
-          <div className="flex flex-col gap-3 pb-3">
-            <p className="text-center font-semibold">
-              Hole complete — {holeSg.score} strokes, SG {fmtSg(holeSg.total)}
-            </p>
-            {isLastHole && offlineFinishQueued && (
-              <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-negative">
-                <WifiOff size={14} /> Offline — will finish syncing once
-                you&rsquo;re back online.
-              </p>
-            )}
-            <div className="flex gap-2">
-              <BigButton
-                variant="secondary"
-                onClick={() => dispatch({ type: "undo" })}
-              >
-                <Undo2 size={20} /> Undo
-              </BigButton>
-              {isLastHole ? (
-                <BigButton block onClick={onFinish} disabled={finishing}>
-                  <Flag size={20} /> {finishing ? "Finishing…" : "Finish round"}
-                </BigButton>
-              ) : (
-                <BigButton
-                  block
-                  onClick={() => dispatch({ type: "nextHole", numHoles })}
-                >
-                  Next hole →
-                </BigButton>
+        {/* Par selector */}
+        <div className="flex items-center gap-2 px-4 py-3">
+          <span className="text-sm font-medium text-muted">Par</span>
+          {[3, 4, 5].map((p) => (
+            <button
+              key={p}
+              type="button"
+              aria-label={`Par ${p}`}
+              aria-pressed={hole.par === p}
+              onClick={() => dispatch({ type: "setPar", par: p })}
+              className={cn(
+                "flex h-11 flex-1 items-center justify-center rounded-app text-lg font-bold",
+                hole.par === p
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-surface text-foreground",
               )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 pb-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted">
-                {state.draft.editing != null ? "Editing shot " : "From "}
-                <span className="font-semibold text-foreground">
-                  {start &&
-                    `${LIE_LABEL[start.lie]} ${start.distance}${unitFor(start.lie)}`}
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: "undo" })}
-                className="flex items-center gap-1 text-muted"
-              >
-                <Undo2 size={16} /> Undo
-              </button>
-            </div>
+            >
+              {p}
+            </button>
+          ))}
+        </div>
 
-            {!putting && (
-              <div className="grid grid-cols-5 gap-1.5">
-                {END_LIES.map((lie) => (
+        {/* Shot list */}
+        <div className="flex-1 overflow-y-auto px-4">
+          {inputs.length === 0 && hole.length != null && (
+            <p className="py-6 text-center text-sm text-muted">
+              Tee shot from {hole.length} yd — where did it end up?
+            </p>
+          )}
+          <ul className="flex flex-col gap-2 py-2">
+            {inputs.map((si, i) => {
+              const editable = !state.holes[state.current].shots[i]?.isHoled;
+              const sg = results[i].sg;
+              return (
+                <li key={i}>
                   <button
-                    key={lie}
                     type="button"
-                    onClick={() => dispatch({ type: "pickLie", lie })}
+                    disabled={!editable}
+                    onClick={() => dispatch({ type: "editShot", index: i })}
                     className={cn(
-                      "flex min-h-14 flex-col items-center justify-center rounded-app text-xs font-semibold",
-                      state.draft.endLie === lie
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-surface text-foreground",
+                      "flex w-full items-center justify-between rounded-app border border-border px-3 py-2 text-left",
+                      state.draft.editing === i && "border-primary",
+                      editable ? "active:bg-surface" : "opacity-90",
                     )}
                   >
-                    {LIE_LABEL[lie]}
+                    <span className="flex items-center gap-2">
+                      <span className="w-5 text-sm font-bold text-muted">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm">
+                        {LIE_LABEL[si.startLie]} {si.startDistance}
+                        {unitFor(si.startLie)}
+                        <span className="mx-1 text-muted">→</span>
+                        {si.isHoled ? (
+                          <span className="font-semibold text-primary">
+                            Holed
+                          </span>
+                        ) : (
+                          <>
+                            {LIE_LABEL[si.endLie as Lie]} {si.endDistance}
+                            {unitFor(si.endLie as Lie)}
+                          </>
+                        )}
+                        {si.penaltyStrokes > 0 && (
+                          <span className="ml-1 rounded bg-negative/10 px-1 text-xs font-semibold text-negative">
+                            {si.penaltyStrokes === 2 ? "OB" : "PEN"}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold tabular-nums",
+                        sg >= 0 ? "text-positive" : "text-negative",
+                      )}
+                    >
+                      {fmtSg(sg)}
+                    </span>
                   </button>
-                ))}
-              </div>
-            )}
-
-            {/* Distance + penalty */}
-            <div className="flex items-center justify-between">
-              <div className="text-3xl font-bold tabular-nums">
-                {state.draft.distance || "0"}
-                <span className="ml-1 text-lg font-medium text-muted">
-                  {entryUnit}
-                </span>
-              </div>
-              {!putting && (
-                <div className="flex gap-1.5">
-                  <PenaltyChip
-                    label="Penalty"
-                    active={state.draft.penalty === 1}
-                    onClick={() => dispatch({ type: "setPenalty", value: 1 })}
-                  />
-                  <PenaltyChip
-                    label="OB"
-                    active={state.draft.penalty === 2}
-                    onClick={() => dispatch({ type: "setPenalty", value: 2 })}
-                  />
-                </div>
-              )}
+                </li>
+              );
+            })}
+          </ul>
+          {inputs.length > 0 && (
+            <div className="flex justify-between border-t border-border py-2 text-sm font-semibold">
+              <span>
+                {holeSg.score} strokes (
+                {holeSg.score - hole.par >= 0 ? "+" : ""}
+                {holeSg.score - hole.par})
+              </span>
+              <span
+                className={
+                  holeSg.total >= 0 ? "text-positive" : "text-negative"
+                }
+              >
+                Hole SG {fmtSg(holeSg.total)}
+              </span>
             </div>
+          )}
+        </div>
 
-            <NumericKeypad
+        {/* Entry dock */}
+        <div className="shrink-0 border-t border-border bg-background px-4 pb-safe pt-3">
+          {hole.length == null ? (
+            <LengthEntry
+              value={state.draft.distance}
               onDigit={(d) => dispatch({ type: "digit", d })}
               onBackspace={() => dispatch({ type: "backspace" })}
+              onSet={() => dispatch({ type: "setLength" })}
             />
-
-            <div className="flex gap-2">
-              {state.draft.editing != null ? (
-                <BigButton
-                  variant="danger"
-                  onClick={() =>
-                    dispatch({
-                      type: "deleteShot",
-                      index: state.draft.editing!,
-                    })
-                  }
-                >
-                  Delete
-                </BigButton>
-              ) : (
+          ) : complete && state.draft.editing == null ? (
+            <div className="flex flex-col gap-3 pb-3">
+              <p className="text-center font-semibold">
+                Hole complete — {holeSg.score} strokes, SG {fmtSg(holeSg.total)}
+              </p>
+              {isLastHole && offlineFinishQueued && (
+                <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-negative">
+                  <WifiOff size={14} /> Offline — will finish syncing once
+                  you&rsquo;re back online.
+                </p>
+              )}
+              <div className="flex gap-2">
                 <BigButton
                   variant="secondary"
-                  onClick={() => dispatch({ type: "holeOut" })}
+                  onClick={() => dispatch({ type: "undo" })}
                 >
-                  Holed
+                  <Undo2 size={20} /> Undo
                 </BigButton>
-              )}
-              <BigButton
-                block
-                disabled={!canAdd}
-                onClick={() => dispatch({ type: "addShot" })}
-              >
-                {state.draft.editing != null ? "Save shot" : "Add shot"}
-              </BigButton>
+                {isLastHole ? (
+                  <BigButton block onClick={onFinish} disabled={finishing}>
+                    <Flag size={20} />{" "}
+                    {finishing ? "Finishing…" : "Finish round"}
+                  </BigButton>
+                ) : (
+                  <BigButton
+                    block
+                    onClick={() => dispatch({ type: "nextHole", numHoles })}
+                  >
+                    Next hole →
+                  </BigButton>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col gap-3 pb-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted">
+                  {state.draft.editing != null ? "Editing shot " : "From "}
+                  <span className="font-semibold text-foreground">
+                    {start &&
+                      `${LIE_LABEL[start.lie]} ${start.distance}${unitFor(start.lie)}`}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: "undo" })}
+                  className="flex items-center gap-1 text-muted"
+                >
+                  <Undo2 size={16} /> Undo
+                </button>
+              </div>
+
+              {!putting && (
+                <div className="grid grid-cols-5 gap-1.5">
+                  {END_LIES.map((lie) => (
+                    <button
+                      key={lie}
+                      type="button"
+                      onClick={() => dispatch({ type: "pickLie", lie })}
+                      className={cn(
+                        "flex min-h-14 flex-col items-center justify-center rounded-app text-xs font-semibold",
+                        state.draft.endLie === lie
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-surface text-foreground",
+                      )}
+                    >
+                      {LIE_LABEL[lie]}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Distance + penalty */}
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold tabular-nums">
+                  {state.draft.distance || "0"}
+                  <span className="ml-1 text-lg font-medium text-muted">
+                    {entryUnit}
+                  </span>
+                </div>
+                {!putting && (
+                  <div className="flex gap-1.5">
+                    <PenaltyChip
+                      label="Penalty"
+                      active={state.draft.penalty === 1}
+                      onClick={() => dispatch({ type: "setPenalty", value: 1 })}
+                    />
+                    <PenaltyChip
+                      label="OB"
+                      active={state.draft.penalty === 2}
+                      onClick={() => dispatch({ type: "setPenalty", value: 2 })}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <NumericKeypad
+                onDigit={(d) => dispatch({ type: "digit", d })}
+                onBackspace={() => dispatch({ type: "backspace" })}
+              />
+
+              <div className="flex gap-2">
+                {state.draft.editing != null ? (
+                  <BigButton
+                    variant="danger"
+                    onClick={() =>
+                      dispatch({
+                        type: "deleteShot",
+                        index: state.draft.editing!,
+                      })
+                    }
+                  >
+                    Delete
+                  </BigButton>
+                ) : (
+                  <BigButton
+                    variant="secondary"
+                    onClick={() => dispatch({ type: "holeOut" })}
+                  >
+                    Holed
+                  </BigButton>
+                )}
+                <BigButton
+                  block
+                  disabled={!canAdd}
+                  onClick={() => dispatch({ type: "addShot" })}
+                >
+                  {state.draft.editing != null ? "Save shot" : "Add shot"}
+                </BigButton>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      <ConfirmDialog
+        open={confirmingDiscard}
+        title="Discard this round?"
+        description="This permanently removes the round and every shot in it. This can't be undone."
+        confirmLabel="Discard round"
+        destructive
+        pending={discarding}
+        onConfirm={onConfirmDiscard}
+        onCancel={() => setConfirmingDiscard(false)}
+      />
+      <OfflineNoticeModal
+        open={discardGuard.blocked}
+        onClose={discardGuard.dismiss}
+      />
+    </>
   );
 }
 

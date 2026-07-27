@@ -29,8 +29,8 @@ export function OfflineNoticeModal({
           You&rsquo;re offline
         </h2>
         <p className="mt-1.5 text-sm text-muted">
-          That needs a connection. Whatever&rsquo;s already open — including
-          a round in progress — keeps working offline.
+          That needs a connection. Whatever&rsquo;s already open — including a
+          round in progress — keeps working offline.
         </p>
         <div className="mt-6">
           <BigButton block onClick={onClose}>
