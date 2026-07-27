@@ -207,7 +207,7 @@ export function RoundSummary({
           </section>
 
           {/* Category breakdown */}
-          <section className="flex flex-col gap-3">
+          <section className="flex flex-col gap-3 rounded-app border border-border p-4">
             {CATEGORY_ORDER.map((c) => (
               <div key={c} className="flex items-center gap-3">
                 <span className="w-28 shrink-0 text-sm font-medium">
