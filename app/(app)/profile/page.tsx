@@ -3,8 +3,10 @@ import { getProfile } from "@/lib/db/queries";
 import { loadUserRounds } from "@/lib/db/round-queries";
 import { resolveBaseline } from "@/lib/baseline";
 import { computeCareerStats } from "@/lib/career-stats";
+import { careerBucketTotals } from "@/lib/round-stats";
 import { signOutAction } from "@/app/auth/actions";
 import { BigButton } from "@/components/ui/big-button";
+import { AdvancedStatsSection } from "@/components/stats/advanced-stats";
 import {
   PasswordForm,
   ProfileSettingsForm,
@@ -30,6 +32,13 @@ export default async function ProfilePage() {
 
   const rounds = await loadUserRounds(user.id, baseline);
   const stats = computeCareerStats(rounds);
+  const bucketTotals = careerBucketTotals(
+    rounds.map((r) => ({
+      status: r.status,
+      holesPlayed: r.summary.holesPlayed,
+      holes: r.holes,
+    })),
+  );
 
   return (
     <main className="mx-auto w-full max-w-md px-5 py-6">
@@ -82,6 +91,10 @@ export default async function ProfilePage() {
           </>
         )}
       </section>
+
+      {stats.roundsPlayed > 0 && (
+        <AdvancedStatsSection buckets={bucketTotals} valueLabel="Avg SG / 18" />
+      )}
 
       {/* Profile settings */}
       <section className="mt-6">

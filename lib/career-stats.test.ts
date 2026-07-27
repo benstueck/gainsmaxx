@@ -27,6 +27,7 @@ function round(
       holesPlayed,
       baseline: "tour",
     },
+    holes: [],
     ...overrides,
   };
 }

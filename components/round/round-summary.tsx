@@ -14,6 +14,8 @@ import {
   roundStrokesGained,
   type SgCategory,
 } from "@/lib/sg";
+import { computeBucketTotals, roundFirGir } from "@/lib/round-stats";
+import { AdvancedStatsSection } from "@/components/stats/advanced-stats";
 
 const CATEGORY_LABEL: Record<SgCategory, string> = {
   ott: "Off the tee",
@@ -25,6 +27,10 @@ const CATEGORY_ORDER: SgCategory[] = ["ott", "app", "arg", "putt"];
 
 const fmtSg = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
 const fmtToPar = (v: number) => (v === 0 ? "E" : v > 0 ? `+${v}` : `${v}`);
+const fmtPct = (made: number, attempted: number) =>
+  attempted === 0
+    ? "—"
+    : `${made}/${attempted} (${Math.round((made / attempted) * 100)}%)`;
 
 /** Diverging bar: green right of the zero midpoint for gained, red left for lost. */
 function SgBar({ value, max }: { value: number; max: number }) {
@@ -96,6 +102,9 @@ export function RoundSummary({
     0.5,
     ...CATEGORY_ORDER.map((c) => Math.abs(round.byCategory[c])),
   );
+
+  const firGir = roundFirGir(holes);
+  const bucketTotals = computeBucketTotals([holes]);
 
   const date = new Date(playedAt).toLocaleDateString(undefined, {
     month: "short",
@@ -181,6 +190,20 @@ export function RoundSummary({
             <p className="mt-1 text-sm text-muted">
               {round.score} strokes · {fmtToPar(round.toPar)} to par
             </p>
+            <div className="mt-3 flex gap-4 border-t border-border pt-3 text-sm">
+              <div>
+                <span className="text-muted">Fairways </span>
+                <span className="font-semibold tabular-nums">
+                  {fmtPct(firGir.fir.made, firGir.fir.attempted)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted">Greens </span>
+                <span className="font-semibold tabular-nums">
+                  {fmtPct(firGir.gir.made, firGir.gir.attempted)}
+                </span>
+              </div>
+            </div>
           </section>
 
           {/* Category breakdown */}
@@ -262,6 +285,8 @@ export function RoundSummary({
               Per-hole SG is shown vs the PGA Tour baseline.
             </p>
           </section>
+
+          <AdvancedStatsSection buckets={bucketTotals} valueLabel="Total SG" />
         </>
       )}
 

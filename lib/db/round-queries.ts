@@ -72,6 +72,7 @@ export type FeedRound = {
   numHoles: number;
   status: "in_progress" | "complete";
   summary: RoundSummary;
+  holes: HoleState[];
 };
 
 /**
@@ -115,6 +116,7 @@ export async function loadUserRounds(
       numHoles: round.numHoles,
       status: round.status,
       summary,
+      holes,
     };
   });
 }
