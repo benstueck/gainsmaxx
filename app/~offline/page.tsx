@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { offlineDb } from "@/lib/offline/db";
 
 // Still static at build time (only the client-side IndexedDB check is
@@ -37,12 +36,17 @@ export default function OfflinePage() {
             available without a connection — but you have an in-progress
             round saved locally.
           </p>
-          <Link
+          {/* Plain anchor, not next/link: this page is only ever reached
+              because a client-side transition already failed offline, so a
+              soft navigation here would just fail the same way. A real
+              browser navigation is what lets the service worker serve the
+              round page from its own cache. */}
+          <a
             href={`/round/${roundId}`}
             className="mt-2 flex h-16 w-full items-center justify-center rounded-xl bg-primary text-lg font-semibold text-white"
           >
             Resume round
-          </Link>
+          </a>
         </>
       ) : (
         <p className="text-muted">

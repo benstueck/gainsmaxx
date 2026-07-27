@@ -81,8 +81,19 @@ Fixed by:
   dynamic) and, if a draft exists, shows a **"Resume round"** link straight to `/round/{roundId}`,
   which loads from the SW cache since that page was genuinely visited before going offline.
 
-Not yet re-verified on a real device — needs a redeploy + repeat of the force-quit-while-offline
-test.
+Re-verified on a real iPhone: force-quit-while-offline now correctly relaunches into Feed (which
+was cached from normal use) and the in-progress round reopens fine from there.
+
+**Follow-up bug found in the same pass:** tapping the "+" tab while offline (starting a round
+needs a DB round to be created, so it can't work offline) landed on `/~offline` as expected, but
+its **"Resume round" button did nothing** — stuck, no way to navigate anywhere. Cause: "+" is a
+`next/link` client-side transition from an already-mounted page; the RSC fetch fails offline and
+Next's client router swallows it rather than hard-reloading, so by the time `/~offline` renders,
+it's already inside a client-side navigation context — and the "Resume round" link was *also* a
+`next/link`, so clicking it attempted another soft transition that failed the same way. Fixed by
+making that link a plain `<a href>` instead of `next/link`'s `Link`, forcing a real browser
+navigation, which the service worker can serve from its own page cache (the round page was
+genuinely visited before going offline). Re-verify on the phone after this redeploys.
 
 ## Acceptance criteria
 
