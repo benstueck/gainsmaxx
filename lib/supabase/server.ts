@@ -31,11 +31,22 @@ export async function createClient() {
   );
 }
 
-/** Convenience: the currently authenticated user, or null. */
+/**
+ * Convenience: the currently authenticated user, or null.
+ *
+ * Uses getSession() (a local cookie decode, no network call) rather than
+ * getUser() (which re-verifies the JWT against Supabase's Auth server).
+ * This is safe here specifically because proxy.ts's middleware — which
+ * matches every route this app serves except static assets — already
+ * calls getUser() and refreshes the cookies earlier in this exact same
+ * request, so the session in the cookie jar by the time this runs has
+ * already been network-verified moments ago. Don't reuse this pattern
+ * somewhere that isn't guaranteed to run after that middleware.
+ */
 export async function getCurrentUser() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.user ?? null;
 }
