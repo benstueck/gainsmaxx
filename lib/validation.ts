@@ -4,12 +4,17 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/** Postgres unique_violation, thrown by the `postgres` driver with a `.code`. */
+function pgErrorCode(err: unknown): unknown {
+  if (typeof err !== "object" || err === null) return undefined;
+  if ("code" in err) return (err as { code?: unknown }).code;
+  // Drizzle wraps the underlying `postgres` driver error in a
+  // DrizzleQueryError, with the real error (and its .code) at .cause.
+  if ("cause" in err) return pgErrorCode((err as { cause?: unknown }).cause);
+  return undefined;
+}
+
+/** Postgres unique_violation (23505), whether thrown directly by the
+ *  `postgres` driver or wrapped in Drizzle's DrizzleQueryError. */
 export function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code?: unknown }).code === "23505"
-  );
+  return pgErrorCode(err) === "23505";
 }

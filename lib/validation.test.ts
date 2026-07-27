@@ -18,12 +18,23 @@ describe("isValidEmail", () => {
 });
 
 describe("isUniqueViolation", () => {
-  it("recognizes a Postgres unique_violation error", () => {
+  it("recognizes a Postgres unique_violation error thrown directly", () => {
     expect(isUniqueViolation({ code: "23505" })).toBe(true);
+  });
+
+  it("recognizes one wrapped in Drizzle's DrizzleQueryError (.cause)", () => {
+    expect(isUniqueViolation({ cause: { code: "23505" } })).toBe(true);
+  });
+
+  it("recognizes an arbitrarily nested .cause chain", () => {
+    expect(isUniqueViolation({ cause: { cause: { code: "23505" } } })).toBe(
+      true,
+    );
   });
 
   it("rejects other errors", () => {
     expect(isUniqueViolation({ code: "23503" })).toBe(false);
+    expect(isUniqueViolation({ cause: { code: "23503" } })).toBe(false);
     expect(isUniqueViolation(new Error("boom"))).toBe(false);
     expect(isUniqueViolation(null)).toBe(false);
     expect(isUniqueViolation("nope")).toBe(false);

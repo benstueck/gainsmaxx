@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { signInAction, signUpAction, type AuthState } from "@/app/auth/actions";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,23 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
     action,
     {},
   );
+  // React clears uncontrolled form fields after any action submits, success
+  // or not — controlled so a validation error (e.g. a bad email) doesn't
+  // also wipe out what was typed.
+  const [email, setEmail] = useState("");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5">
         <span className="font-semibold">Email</span>
-        <Input name="email" type="email" autoComplete="email" required />
+        <Input
+          name="email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
       </label>
 
       <label className="flex flex-col gap-1.5">
