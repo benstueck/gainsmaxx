@@ -97,6 +97,15 @@ never leaves Feed (or wherever they were), so there's nothing to recover from. `
 back to being a plain static dead-end page, kept only as a last resort for a direct/bookmarked
 link to a page with no cached copy at all; the common path no longer reaches it.
 
+**Same bug, different tab, immediately after:** Profile hit the identical dead end — the "+"
+guard only covered that one tab, so any other tab whose page wasn't cached this session (Profile,
+sometimes Feed) landed on the same tab-bar-less `/~offline` with no way back. Rather than keep
+guarding tabs one at a time as they're found broken, the guard now applies uniformly to **all
+three tabs**: tapping any inactive tab while offline shows the same modal instead of navigating,
+full stop. None of them are guaranteed cached for a given offline session, so there's no safe
+way to allow some through and not others without inspecting the Cache Storage API per-request,
+which isn't worth the complexity here.
+
 ## Acceptance criteria
 
 - [ ] The deployed PWA supports a full offline round with correct SG and per-user data isolation.

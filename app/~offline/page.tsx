@@ -1,9 +1,7 @@
-// Static last-resort fallback for a navigation the service worker has no
-// cached copy of at all (e.g. a direct/bookmarked link to a page that was
-// never visited). The common case — tapping "+" for a new round while
-// offline — is now caught before navigation even starts (see TabBar), so
-// this page is intentionally minimal rather than trying to route the user
-// somewhere from here.
+// Required by the service worker config (Serwist needs a precached fallback
+// URL for a navigation with zero cached copy — e.g. a direct/bookmarked
+// link). Every in-app navigation is now guarded before it ever gets here
+// (see TabBar), so in practice this should never be seen.
 export const dynamic = "force-static";
 
 export default function OfflinePage() {
@@ -15,9 +13,7 @@ export default function OfflinePage() {
       </h1>
       <p className="text-muted">
         This page hasn&rsquo;t been loaded before, so it isn&rsquo;t
-        available without a connection. Anything you&rsquo;ve already
-        opened still works, and any round in progress is saved locally
-        until you&rsquo;re back online.
+        available without a connection.
       </p>
     </main>
   );

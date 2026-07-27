@@ -12,19 +12,16 @@ type Tab = {
   label: string;
   icon: LucideIcon;
   primary?: boolean;
-  /** Needs a fresh server round-trip that can never work offline. */
-  requiresConnection?: boolean;
 };
 
+// Every tab is a fresh, dynamic, authenticated server render — none of them
+// are guaranteed to have a cached copy for a given offline session (e.g.
+// Profile was never opened this session). Rather than guess which ones are
+// safe, block them all uniformly while offline: the alternative is landing
+// on /~offline, a page outside the app shell with no way back.
 const tabs: Tab[] = [
   { href: "/feed", label: "Rounds", icon: List },
-  {
-    href: "/round/new",
-    label: "New round",
-    icon: Plus,
-    primary: true,
-    requiresConnection: true,
-  },
+  { href: "/round/new", label: "New round", icon: Plus, primary: true },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
@@ -36,11 +33,12 @@ export function TabBar() {
     <>
       <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background pb-safe">
         <ul className="mx-auto flex max-w-md items-stretch justify-around">
-          {tabs.map(({ href, label, icon: Icon, primary, requiresConnection }) => {
+          {tabs.map(({ href, label, icon: Icon, primary }) => {
             const active =
               pathname === href || pathname.startsWith(`${href}/`);
             const onClick = (e: React.MouseEvent) => {
-              if (requiresConnection && !navigator.onLine) {
+              if (active) return;
+              if (!navigator.onLine) {
                 e.preventDefault();
                 setShowOfflineNotice(true);
               }
@@ -95,14 +93,11 @@ export function TabBar() {
               You&rsquo;re offline
             </h2>
             <p className="mt-1.5 text-sm text-muted">
-              Starting a new round needs a connection. Any round already in
-              progress is still saved locally — pick it up from Rounds.
+              That page needs a connection. Whatever&rsquo;s already open —
+              including a round in progress — keeps working offline.
             </p>
             <div className="mt-6">
-              <BigButton
-                block
-                onClick={() => setShowOfflineNotice(false)}
-              >
+              <BigButton block onClick={() => setShowOfflineNotice(false)}>
                 OK
               </BigButton>
             </div>
