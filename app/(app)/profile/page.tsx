@@ -55,7 +55,7 @@ export default async function ProfilePage() {
               >
                 {fmtSg(stats.avgTotal)}
               </span>
-              <span className="text-sm text-muted">avg SG / round</span>
+              <span className="text-sm text-muted">avg SG / 18</span>
             </div>
             <p className="mt-1 text-sm text-muted">
               {stats.roundsPlayed} round{stats.roundsPlayed === 1 ? "" : "s"}{" "}
