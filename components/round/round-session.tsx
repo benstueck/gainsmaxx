@@ -423,9 +423,13 @@ export function RoundSession({
     <div className="flex min-h-full flex-col">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
+        {/* Exiting is always safe offline — everything is already saved
+            locally, and Feed is the app's home base (always loaded on
+            launch), so there's nothing to block here. */}
         <GuardedLink
           href="/feed"
           aria-label="Exit round"
+          skipGuard
           className="p-2 text-muted"
         >
           <X size={24} />
@@ -470,14 +474,12 @@ export function RoundSession({
             <ChevronRight size={22} />
           </button>
         </div>
-        <button
-          type="button"
-          onClick={onFinish}
-          disabled={finishing}
-          className="p-2 text-sm font-semibold text-primary disabled:opacity-40"
-        >
-          Finish
-        </button>
+        {/* Spacer to balance the exit button so hole nav stays centered.
+            Finishing early isn't offered — the round isn't done being
+            tracked until the last hole is holed out (see "Finish round"
+            in the entry dock below), so partial-round SG never leaks into
+            a saved round. */}
+        <span className="w-9" aria-hidden />
       </header>
 
       {/* Par selector */}
