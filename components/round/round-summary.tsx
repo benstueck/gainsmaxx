@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { deleteRound } from "@/app/round/actions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { GuardedLink } from "@/components/shell/guarded-link";
+import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
+import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
 import { baselineOptions } from "@/lib/baseline";
 import { holeShotInputs, isHoleComplete, type HoleState } from "@/lib/round";
 import {
@@ -72,6 +74,7 @@ export function RoundSummary({
   const [selectedValue, setSelectedValue] = useState(initialValue);
   const [deleting, startDelete] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const offlineGuard = useOfflineGuard();
 
   function onConfirmDelete() {
     startDelete(() => {
@@ -132,9 +135,12 @@ export function RoundSummary({
             {status === "in_progress" && " · in progress"}
           </p>
         </div>
-        <Link href="/feed" className="p-1 text-sm font-semibold text-primary">
+        <GuardedLink
+          href="/feed"
+          className="p-1 text-sm font-semibold text-primary"
+        >
           Done
-        </Link>
+        </GuardedLink>
       </header>
 
       {playedHoles.length === 0 ? (
@@ -261,23 +267,23 @@ export function RoundSummary({
 
       <div className="flex flex-col gap-2 pt-2">
         {status === "in_progress" ? (
-          <Link
+          <GuardedLink
             href={`/round/${roundId}`}
             className="flex min-h-tap items-center justify-center rounded-app bg-primary px-6 text-lg font-semibold text-primary-foreground"
           >
             Continue round
-          </Link>
+          </GuardedLink>
         ) : (
-          <Link
+          <GuardedLink
             href={`/round/${roundId}?edit=1`}
             className="flex min-h-tap items-center justify-center rounded-app border border-border bg-surface px-6 text-lg font-semibold"
           >
             Edit round
-          </Link>
+          </GuardedLink>
         )}
         <button
           type="button"
-          onClick={() => setConfirmingDelete(true)}
+          onClick={() => offlineGuard.guard(() => setConfirmingDelete(true))}
           disabled={deleting}
           className="min-h-tap text-sm font-semibold text-negative disabled:opacity-40"
         >
@@ -294,6 +300,10 @@ export function RoundSummary({
         pending={deleting}
         onConfirm={onConfirmDelete}
         onCancel={() => setConfirmingDelete(false)}
+      />
+      <OfflineNoticeModal
+        open={offlineGuard.blocked}
+        onClose={offlineGuard.dismiss}
       />
     </main>
   );

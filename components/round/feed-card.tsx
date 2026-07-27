@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FeedRound } from "@/lib/db/round-queries";
 import type { SgCategory } from "@/lib/sg";
+import { GuardedLink } from "@/components/shell/guarded-link";
 
 const MINI: { key: SgCategory; label: string }[] = [
   { key: "ott", label: "OTT" },
@@ -49,7 +49,7 @@ export function FeedCard({ round }: { round: FeedRound }) {
   );
 
   return (
-    <Link
+    <GuardedLink
       href={href}
       className={cn(
         "block rounded-app border p-4 active:bg-surface",
@@ -116,6 +116,6 @@ export function FeedCard({ round }: { round: FeedRound }) {
           ))}
         </div>
       )}
-    </Link>
+    </GuardedLink>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import Link from "next/link";
+import { GuardedLink } from "@/components/shell/guarded-link";
 import {
   X,
   Undo2,
@@ -423,9 +423,13 @@ export function RoundSession({
     <div className="flex min-h-full flex-col">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <Link href="/feed" aria-label="Exit round" className="p-2 text-muted">
+        <GuardedLink
+          href="/feed"
+          aria-label="Exit round"
+          className="p-2 text-muted"
+        >
           <X size={24} />
-        </Link>
+        </GuardedLink>
         <div className="flex items-center gap-1">
           <button
             type="button"

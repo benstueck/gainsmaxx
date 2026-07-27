@@ -58,53 +58,40 @@ shown on screen.
       real bug (below); needs a re-test after the fix.
 - [ ] Update `CLAUDE.md` (status, deploy notes, live URL).
 
-### Bug found and fixed during real-device offline testing
+### Bugs found during real-device offline testing, and the final design
 
-**Force-quitting the installed PWA while offline mid-round, then reopening it, landed on a dead
-"you're offline" page with no way back into the in-progress round.** Root cause: the PWA manifest's
-`start_url` is `/feed`, and iOS relaunches an installed home-screen app at `start_url`, not at
-whatever page was last open. The service worker's runtime cache only holds pages that were
-actually *visited* over the network — so if `/feed` was never loaded in that session (e.g. the
-user went straight from login into "+" → new round), it has no cached copy, the offline
-navigation fails, and Serwist's `fallbacks` config serves the static `/~offline` page — which,
-before this fix, was a dead end even though the in-progress round's own page (visited before
-going offline) was sitting right there in the cache.
+Real-device testing (force-quitting the installed PWA mid-round while offline, then reopening it
+or navigating around) surfaced a whole class of the same bug from different entry points: any
+in-app link to a dynamic, authenticated page (Profile, a past round's summary, "+", "Exit round",
+etc.) that didn't happen to have a cached copy for that offline session would hit Serwist's
+document-fallback page — which lives outside the `(app)` layout, so it has **no tab bar and no
+way to navigate anywhere**. Patching the fallback page itself (a smarter "resume" button, Dexie
+checks) kept breaking in new ways because it was solving the wrong problem: the fallback page is
+inherently a dead end by construction, so the fix has to prevent ever landing on it, not make it
+nicer once you're there.
 
-Fixed by:
+**Final design:** a shared `useOfflineGuard` hook (`lib/offline/use-offline-guard.ts`) + two
+components — `GuardedLink` (`components/shell/guarded-link.tsx`, wraps `next/link`) and
+`OfflineNoticeModal` (`components/shell/offline-notice-modal.tsx`). Every in-app navigation link
+to a dynamic page now goes through `GuardedLink` instead of a bare `Link`: `TabBar` (all three
+tabs), `FeedCard` (every round card), `round-summary.tsx` ("Done", "Continue round"/"Edit round"),
+and `round-session.tsx` ("Exit round"). Each checks `navigator.onLine` before letting the
+navigation proceed; offline, it shows the same small modal and the user stays exactly where they
+were — nothing to get stuck on. `round-summary.tsx`'s "Delete round" button (a server action, not
+a navigation) is guarded the same way via the hook's `guard()` wrapper.
 
-- `components/pwa/register-service-worker.tsx`: now also calls `flushAllDrafts()` once on mount
-  and again on every `online` event — this was previously dead code (defined in
-  `lib/offline/round-sync.ts`, never called anywhere), so a draft queued for a round the user
-  didn't reopen would never sync until they happened to revisit that exact round page.
-- `app/~offline/page.tsx`: no longer a purely static dead end — on load it checks the local
-  Dexie `roundDrafts` table (still precached/static at build time; only the client-side check is
-  dynamic) and, if a draft exists, shows a **"Resume round"** link straight to `/round/{roundId}`,
-  which loads from the SW cache since that page was genuinely visited before going offline.
+The custom `/~offline` fallback page, `additionalPrecacheEntries`, and `fallbacks` config in
+`app/sw.ts` were removed entirely — every reachable navigation is now blocked before it starts,
+so there's nothing left for a fallback page to catch. An unguarded edge case (e.g. a bookmarked
+deep link) just falls through to the browser's own native offline error.
 
-Re-verified on a real iPhone: force-quit-while-offline now correctly relaunches into Feed (which
-was cached from normal use) and the in-progress round reopens fine from there.
+Also fixed in the same pass: `components/pwa/register-service-worker.tsx` now calls
+`flushAllDrafts()` on mount and on every `online` event — previously dead code (defined in
+`lib/offline/round-sync.ts`, never called anywhere), so a queued draft for a round the user didn't
+happen to reopen would never sync.
 
-**Follow-up bug found in the same pass, then redesigned rather than patched further:** tapping
-the "+" tab while offline (starting a round needs a DB round to be created, so it can't work
-offline) landed on `/~offline`, whose "Resume round" button turned out to be the wrong shape for
-the problem entirely — the user already can (and does) resume an in-progress round from the Feed,
-so routing them through a fallback page to get back to the same place was redundant, and it kept
-breaking in new ways (a `next/link` inside an already-broken client-side navigation context
-doing nothing on tap). Redesigned instead: `components/shell/tab-bar.tsx` now checks
-`navigator.onLine` before letting the "+" tab navigate at all, and shows a small in-app modal
-("Starting a new round needs a connection...") instead of navigating when offline — the user
-never leaves Feed (or wherever they were), so there's nothing to recover from. `/~offline` is
-back to being a plain static dead-end page, kept only as a last resort for a direct/bookmarked
-link to a page with no cached copy at all; the common path no longer reaches it.
-
-**Same bug, different tab, immediately after:** Profile hit the identical dead end — the "+"
-guard only covered that one tab, so any other tab whose page wasn't cached this session (Profile,
-sometimes Feed) landed on the same tab-bar-less `/~offline` with no way back. Rather than keep
-guarding tabs one at a time as they're found broken, the guard now applies uniformly to **all
-three tabs**: tapping any inactive tab while offline shows the same modal instead of navigating,
-full stop. None of them are guaranteed cached for a given offline session, so there's no safe
-way to allow some through and not others without inspecting the Cache Storage API per-request,
-which isn't worth the complexity here.
+Needs a final re-test on the phone: force-quit mid-round while offline, then try every tab and a
+past round's card while still offline — none should ever leave you stuck.
 
 ## Acceptance criteria
 
