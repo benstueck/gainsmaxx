@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// Generates placeholder solid-color PWA icons (no deps beyond Node's zlib).
-// Swap public/icons/*.png for real branded artwork whenever it's ready —
-// this just satisfies "installable" checks (>=192px and >=512px icons).
+// Historical: generates a placeholder solid-color PNG (no deps beyond
+// Node's zlib). public/icons/*.png are now the real app icon (the ⛳ emoji
+// on the fairway-green background, rendered once via headless Chrome) —
+// don't run this, it would overwrite them with a flat green square again.
+// Kept only as a reference for the "no dependencies" PNG-encoding approach.
 //
 //   node scripts/gen-pwa-icons.mjs
 
