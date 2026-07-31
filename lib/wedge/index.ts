@@ -18,4 +18,13 @@ export {
   nextTarget,
 } from "./engine";
 
+export {
+  DEFAULT_BALL_COUNT,
+  DEFAULT_MIN_DISTANCE,
+  DEFAULT_MAX_DISTANCE,
+  MIN_BALLS,
+  MAX_BALLS,
+  validateSessionParams,
+} from "./session-params";
+
 export type { WedgeShot, WedgeShotResult, WedgeSessionSummary } from "./types";

@@ -1,55 +1,52 @@
+import { Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { loadUserWedgeSessions } from "@/lib/db/wedge-queries";
+import { GuardedLink } from "@/components/shell/guarded-link";
+import { SessionCard } from "@/components/wedge/session-card";
 
-/**
- * Wedgemaxx session feed. Phase 3 establishes the route so the new tab has a
- * real destination; Phase 4 adds the setup screen ("+"), styled session cards
- * and the in-progress "Continue" treatment.
- */
 export default async function WedgemaxxPage() {
   const user = await requireUser();
   const sessions = await loadUserWedgeSessions(user.id);
 
+  const inProgress = sessions.filter((s) => s.status === "in_progress");
+  const completed = sessions.filter((s) => s.status === "complete");
+
   return (
     <main className="mx-auto w-full max-w-md px-5 py-6">
-      <h1 className="text-2xl font-bold tracking-tight">Wedgemaxx</h1>
-      <p className="mt-1 text-sm text-muted">
-        Wedge distance control, scored by strokes gained.
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Wedgemaxx</h1>
+          <p className="mt-1 text-sm text-muted">
+            Wedge distance control, scored by strokes gained.
+          </p>
+        </div>
+        {/* Starting a session creates a server row, so this stays guarded —
+            unlike resuming one, which works offline. */}
+        <GuardedLink
+          href="/wedgemaxx/new"
+          aria-label="Start a session"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95"
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </GuardedLink>
+      </div>
 
       {sessions.length === 0 ? (
         <div className="mt-8 rounded-app border border-border bg-surface p-8 text-center text-muted">
           No sessions yet.
+          <br />
+          Tap <span className="font-semibold text-primary">+</span> above to
+          start one.
         </div>
       ) : (
-        <ul className="mt-5 flex flex-col gap-3">
-          {sessions.map((s) => (
-            <li
-              key={s.id}
-              className="rounded-app border border-border p-4 text-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold">
-                  {new Date(s.startedAt).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </span>
-                <span className="font-bold tabular-nums">
-                  {s.summary.ballsHit > 0
-                    ? `${s.summary.averagePoints.toFixed(1)} pts`
-                    : "—"}
-                </span>
-              </div>
-              <div className="mt-1 text-muted">
-                {s.summary.ballsHit}/{s.ballCount} balls · {s.minDistance}–
-                {s.maxDistance} yd
-                {s.status === "in_progress" && " · in progress"}
-              </div>
-            </li>
+        <div className="mt-5 flex flex-col gap-3">
+          {inProgress.map((session) => (
+            <SessionCard key={session.id} session={session} />
           ))}
-        </ul>
+          {completed.map((session) => (
+            <SessionCard key={session.id} session={session} />
+          ))}
+        </div>
       )}
     </main>
   );

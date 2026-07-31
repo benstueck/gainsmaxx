@@ -1,6 +1,7 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** Phases 1–2 (scoring engine, schema) done; Phases 3–8 not started
+**Status:** Phases 1–4 done and playable end to end (create → log balls → mishits → finish).
+Remaining: timer, tap-to-edit, ⋯ menu (Phase 5), summary page (6), offline (7), profile (8).
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -91,21 +92,49 @@ auth-protected, not a 404), no console errors, build registers the route.
 
 Also fixed a rebrand loose end: the login tagline still read "track your strokes gained".
 
-## Phase 4 — Session feed + setup
+## Phase 4 — Session feed + setup — **done** (plus the core entry loop)
 
-- [ ] `app/(app)/wedgemaxx/page.tsx` — sessions newest-first, in-progress pinned as "Continue"
-      with the same visual treatment as `FeedCard`
-- [ ] `components/wedge/session-card.tsx` — date, balls, avg points, duration
-- [ ] Setup screen: ball count (40), min (50), max (140), all editable, **defaults remembered
-      from the last session**; validate `min < max`
+- [x] `app/(app)/wedgemaxx/page.tsx` — sessions newest-first, in-progress pinned as "Continue",
+      matching `FeedCard`'s treatment; "+" in the header (guarded — creating a session needs the
+      server)
+- [x] `components/wedge/session-card.tsx` — date, balls, avg points, bias, mishits, duration
+- [x] Setup screen with ball count / min / max, **defaults remembered from the last session**
+- [x] `app/wedgemaxx/actions.ts` — create / save / finish / delete
+- [x] **Entry loop built early** (`app/wedgemaxx/[id]/page.tsx` +
+      `components/wedge/wedge-session.tsx`): autofocused carry input, Mishit button, live shot
+      list, running average. Pulled forward from Phase 5 because the "+" would otherwise create a
+      session and land on a 404. Finish redirects to the list (Phase 6 will point it at a summary).
 
-## Phase 5 — Session screen (the core loop)
+**Two real bugs found by verifying in the browser — neither caught by tsc or eslint:**
 
-- [ ] `app/wedgemaxx/[id]/page.tsx` + `components/wedge/wedge-session.tsx`
-- [ ] Elapsed timer (pauses on leave), "Ball X of N", large target yardage
-- [ ] Carry input **autofocused with the keyboard up**; submit → score → next ball
-- [ ] **Mishit** button beside the input — one tap, no number needed, advances to the next ball
-- [ ] Previous shots as rows (target, carry, signed delta, proximity, points), **tap to edit**
+1. **`"use server"` files may only export async functions.** `actions.ts` exported `MIN_BALLS`,
+   `MAX_BALLS` and a synchronous `validateSessionParams`, which broke the whole route at runtime
+   (blank page). Moved to `lib/wedge/session-params.ts`, which also lets the client form and the
+   server action share one definition of "valid".
+2. **The entry dock floated mid-screen instead of pinning to the bottom.** `min-h-full` resolves
+   to `min-height: 100%`, but `body`'s `height` property is `auto` (it only sets `min-height`), and
+   percentage heights only resolve against a _definite_ parent height — so the container collapsed
+   to content height (330px in an 812px viewport) and `flex-1` had nothing to distribute. Fixed
+   with `min-h-dvh`. **Note:** `components/round/round-session.tsx` has the same `min-h-full` and
+   the same latent bug; it just isn't visible because a round's content fills the screen. Left
+   alone deliberately rather than touching working code mid-phase.
+
+**Verified end to end in the browser** on a 3-ball session: targets random and never repeating,
+`87→82 (−5) = 91 pts`, a mishit scoring 41, an exact carry scoring **126 (no hole-out cliff)`,
+session average 86.0, finish redirecting to the list, and the card showing `bias −2.5 yd short`with the mishit correctly excluded. Confirmed against the DB: status`complete`, shots in order,
+**mishit persisted as NULL**.
+
+## Phase 5 — Session screen (remaining pieces)
+
+- [x] `app/wedgemaxx/[id]/page.tsx` + `components/wedge/wedge-session.tsx` (done in Phase 4)
+- [x] "Ball X of N", large target yardage (done in Phase 4)
+- [x] Carry input **autofocused**; submit → score → next ball (done in Phase 4)
+- [x] **Mishit** button beside the input (done in Phase 4)
+- [x] Previous shots as rows, newest first (done in Phase 4)
+- [ ] Elapsed timer (pauses on leave) — currently `elapsedSeconds` is always persisted as 0
+- [ ] **Tap a row to edit** a mistyped carry
+- [ ] Ability to change the pending target is deliberately absent; note that a **reload re-rolls
+      it**, since the pending target lives in client state and is only persisted once logged
 - [ ] **⋯ menu**: **End session** (finish early, score over shots taken) and **Discard session**
       (delete, with `ConfirmDialog`) — reuse the round-session patterns, including the
       offline guard on Discard (it's a real server mutation)
