@@ -1,0 +1,156 @@
+# Design Plan — Wedgemaxx (wedge distance-control training)
+
+Second design plan (after [`01-design.md`](01-design.md)). This is the feature that turns the app
+from "a strokes-gained round tracker" into a golf-performance platform with multiple modes — and
+is why the app was renamed **Gainsmaxxing → Gainsmaxx**.
+
+## Context
+
+Range practice with wedges is usually unmeasured: you hit balls at a flag and eyeball it.
+**Wedgemaxx** turns that into a scored drill. The app calls out a random target yardage, you hit
+a shot, you enter the **carry distance**, and it scores the shot in points derived from strokes
+gained. Inspired by [Stack Wedging](https://www.thestacksystem.com/pages/stack-wedging), which
+maps its Stack Points from SG data with tour = 200 points _at any target distance_ — that
+per-distance normalization is the key idea we adopt.
+
+Unlike round tracking, the only measurement available is **carry distance**. There is no lateral
+dispersion data, so the whole model is one-dimensional. That constraint drives the scoring design
+below.
+
+## Scoring model
+
+### Per-shot geometry
+
+```
+error  = |target − carry|                             yards
+prox   = max(error, 1)                                yards — floor, see below
+end    = prox ≤ 30 ? Exp(green, prox × 3 ft)
+                   : Exp(fairway, prox yd)
+sgRaw  = Exp(fairway, target) − end − 1
+```
+
+- **Start lie is always `fairway`** (range turf/mat).
+- **The 1-yard floor matters.** Without it, an exact carry means proximity 0 → holed →
+  `Exp(end) = 0`. At 130 yd that scores 194 points while being 1 yard off scores 142 — a
+  **52-point cliff on a single yard**. Since carries are entered as whole numbers, exact hits are
+  common enough that they'd dominate a session average. The floor makes a perfect number a 3-ft
+  tap-in instead of a hole-out.
+- **The 30-yard lie switch matters.** The putting table ends at 90 ft (= 30 yd), so a green-only
+  model scores a 30-yard miss and a 40-yard chunk _identically_. Switching to the fairway table
+  beyond 30 yards keeps the curve monotonic. The boundary is nearly continuous —
+  `green@90ft = 2.400` vs `fairway@30yd = 2.500`, a 0.1-stroke step — and 30 yards is already
+  `ARG_MAX_YARDS` in the SG engine, so it's conceptually consistent too.
+
+### Per-distance calibration (the important part)
+
+Raw SG is **not** a fair score here. `sgRaw = 0` means "you finished at tour-average _total_
+proximity" — but total proximity includes a lateral miss you physically cannot make on a range.
+Grading a 1-D outcome on a 2-D benchmark flatters the player, and unevenly: uncalibrated, a tour
+player scores 111 from 50 yd but only 106 from 140 yd.
+
+We need tour's **distance-only** error. Derive it from our own benchmark data plus one geometric
+assumption — no external dataset required:
+
+- `P_tour(target)` = the proximity at which `sgRaw = 0` (solve numerically). This is tour-average
+  total proximity, already implied by the SG table.
+- For an isotropic 2-D Gaussian miss, mean radial distance = `1.253σ` per-axis. So
+  **`σ_tour(target) = P_tour(target) / 1.253`**.
+
+Sanity check against published data — this yields tour distance errors of **2.4 yd @ 50**,
+3.2 @ 90, 4.4 @ 130, **5.0 yd @ 140**, matching the reported
+[3–5 yard tour wedge dispersion](https://www.scoringzone.net/blog/golf-wedge-distances-chart.html).
+
+**Anchor: scratch = 100 points at every target distance.** Scratch is modelled as
+`σ_scratch = 1.5 × σ_tour`.
+
+```
+ref(target) = E[ sgRaw(target, e) ]  where e ~ N(0, σ_scratch(target))
+points      = 100 + 50 × (sgRaw − ref(target))
+```
+
+**Use the expectation, not the score at the mean error.** The points curve is convex, so a
+player's session average is ~7 points higher than their score at their average error. Calibrating
+on `E[sgRaw]` makes the anchor exact by linearity of expectation.
+
+### Expected results (simulated, 40 balls, targets 50–140)
+
+| Tour | Scratch | Low single digit | Mid handicap | High handicap |
+| ---- | ------- | ---------------- | ------------ | ------------- |
+| 107  | **100** | 95               | 88           | 83            |
+
+Single-shot values at 110 yd: perfect ≈ 124, 3 yd off ≈ 105, 5 yd ≈ 94, 10 yd ≈ 84, 20 yd ≈ 72,
+40 yd ≈ 53. Smooth, monotonic, never negative.
+
+**50 points per stroke gained** is a pure aesthetic knob — it scales spread without changing
+signal-to-noise. It lives as a single named constant so it's trivial to retune.
+
+### Why derive points instead of storing them
+
+Only `target_distance` and `carry_distance` are persisted; points are always recomputed by the
+pure engine, exactly like round SG is recomputed in `lib/db/round-queries.ts`. If the calibration
+constant is ever retuned, all historical sessions re-score consistently instead of drifting.
+
+## Navigation change
+
+The 3-tab bar changes meaning:
+
+| Tab        | Before        | After                                                    |
+| ---------- | ------------- | -------------------------------------------------------- |
+| **Left**   | Feed (rounds) | Feed (rounds) — **starting a round moves to a "+" here** |
+| **Middle** | "+" new round | **Wedgemaxx** — session feed + entry point               |
+| **Right**  | Profile       | Profile (unchanged, gains a Wedgemaxx stats block)       |
+
+## Wedgemaxx UX
+
+**Tab → session feed.** Newest-first list of sessions, in-progress pinned at top as "Continue",
+matching `FeedCard`'s visual treatment. A "+" starts a new session.
+
+**Setup screen.** Three parameters, all editable, defaults remembered from the last session:
+
+- Number of balls — default **40**
+- Min distance — default **50 yd**
+- Max distance — default **140 yd**
+
+**Session screen.**
+
+- Elapsed **timer** (informational only; pauses when you back out).
+- **Ball X of N**.
+- A large **target yardage** — uniform random whole yards in `[min, max]`, never repeating the
+  immediately-preceding target.
+- A big carry-distance input, **autofocused with the keyboard up** so the loop is type → submit.
+- Submitting scores the shot and advances to the next ball with a new target.
+- Previous shots listed underneath as rows: target, carry, signed delta, proximity, points.
+  **Tap any row to edit** a mistyped carry; points recompute.
+- **⋯ menu** (top right): **End session** (finish early — the range ran out of balls on ball 38;
+  scores over shots actually taken) and **Discard session** (delete entirely, with confirmation).
+  Backing out just pauses.
+
+**Summary screen.** Hero **average points**, plus balls hit, duration, best/worst shot, and —
+the genuinely coachable number — **average signed bias** (are you systematically short?). A
+per-distance-bucket breakdown (short/mid/long) is a natural stretch, mirroring Advanced Stats.
+
+## Data model
+
+Two new tables, same RLS + per-user isolation pattern as `rounds`/`holes`/`shots`:
+
+- `wedge_sessions` — `user_id`, `client_uuid`, `started_at`, `status` (in_progress|complete),
+  `ball_count`, `min_distance`, `max_distance`, `elapsed_seconds`, timestamps.
+- `wedge_shots` — `session_id`, `shot_number`, `target_distance`, `carry_distance`, timestamps.
+
+## Architecture
+
+- **`lib/wedge/`** — pure, dependency-free scoring engine, same discipline as `lib/sg/` (no
+  framework/IO imports) so it runs identically offline on the client and on the server.
+  The `ref(target)` curve is expensive to integrate per-shot, so it's computed once over a coarse
+  grid at module init and interpolated.
+- **Offline-first**, reusing the Dexie draft-queue + retry-on-reconnect pattern from
+  `lib/offline/`. Requires a Dexie **version 2** migration adding a `wedgeDrafts` table without
+  disturbing the existing `roundDrafts`.
+- Starting a _new_ session needs connectivity (it creates the server row), same limitation as
+  starting a new round; an in-progress session survives signal loss.
+
+## Out of scope for v1
+
+Launch-monitor integration, lateral dispersion, club selection/tagging per shot, difficulty
+progression or adaptive targets (Stack's "100 challenge levels"), head-to-head compete, and
+Wedgemaxx contributing to on-course SG stats.

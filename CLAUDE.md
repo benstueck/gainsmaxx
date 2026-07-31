@@ -12,6 +12,9 @@ Built around one primary user for now, but as a real multi-user app (accounts + 
 isolation).
 
 - Full design intent & scope: [`plans/01-design.md`](plans/01-design.md).
+- **Wedgemaxx** design + scoring derivation: [`plans/02-wedgemaxx.md`](plans/02-wedgemaxx.md).
+  Read this before touching `lib/wedge/` — the points calibration is non-obvious and documented
+  there with its reasoning; don't re-derive it.
 - Resumable task checklists: [`tasks/`](tasks/) (start at [`tasks/README.md`](tasks/README.md)).
 
 ## Status
