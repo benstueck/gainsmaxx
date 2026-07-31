@@ -38,6 +38,22 @@ const GREEN_RADIUS_YD = 30;
  */
 const MIN_PROXIMITY_YD = 1;
 
+/**
+ * SG for a mishit (shank/top/duff): the ball makes **zero progress**, ending
+ * as far from the pin as it started, so Exp(end) === Exp(start) and the shot
+ * is worth exactly one wasted stroke.
+ *
+ * Stated explicitly rather than derived by passing carry = 0, which only
+ * happens to give −1 while targets stay outside the 30-yard putting range.
+ *
+ * Two properties worth preserving if this is ever retuned:
+ * - It lands ~41 points at every target, always BELOW the worst realistic
+ *   distance miss, so marking a merely-bad shot as a mishit is never the
+ *   cheap way out. The escape hatch can't be gamed.
+ * - It costs ~1.5 points off a 40-ball average — noticeable, not ruinous.
+ */
+const MISHIT_SG = -1;
+
 /** Mean radial miss of an isotropic 2-D Gaussian, in units of per-axis σ. */
 const RAYLEIGH_MEAN = Math.sqrt(Math.PI / 2);
 
@@ -54,9 +70,12 @@ function endExpectedStrokes(proxYd: number): number {
     : expectedStrokes("fairway", proxYd);
 }
 
-/** Signed error in yards: negative = short, positive = long. */
-export function shotDeltaYd(target: number, carry: number): number {
-  return carry - target;
+/** Signed error in yards: negative = short, positive = long. Null for a mishit. */
+export function shotDeltaYd(
+  target: number,
+  carry: number | null,
+): number | null {
+  return carry == null ? null : carry - target;
 }
 
 /** Distance from the pin used for scoring, floored so nothing ever holes out. */
@@ -67,8 +86,10 @@ export function shotProximityYd(target: number, carry: number): number {
 /**
  * Raw strokes gained for the shot, treating all error as longitudinal (the
  * only dimension a range gives us). Start lie is always fairway.
+ * A null carry means a mishit — see MISHIT_SG.
  */
-export function wedgeShotSg(target: number, carry: number): number {
+export function wedgeShotSg(target: number, carry: number | null): number {
+  if (carry == null) return MISHIT_SG;
   return (
     expectedStrokes("fairway", target) -
     endExpectedStrokes(shotProximityYd(target, carry)) -
@@ -151,7 +172,7 @@ export function referenceSg(target: number): number {
 }
 
 /** Points for one ball. 100 = scratch-level control, at every target. */
-export function wedgeShotPoints(target: number, carry: number): number {
+export function wedgeShotPoints(target: number, carry: number | null): number {
   return (
     BASE_POINTS +
     POINTS_PER_STROKE * (wedgeShotSg(target, carry) - referenceSg(target))
@@ -163,6 +184,7 @@ export function scoreShot(shot: WedgeShot): WedgeShotResult {
   return {
     targetDistance,
     carryDistance,
+    isMishit: carryDistance == null,
     deltaYd: shotDeltaYd(targetDistance, carryDistance),
     points: wedgeShotPoints(targetDistance, carryDistance),
   };
@@ -177,19 +199,34 @@ export function sessionSummary(shots: WedgeShot[]): WedgeSessionSummary {
       averagePoints: 0,
       averageBiasYd: 0,
       averageAbsErrorYd: 0,
+      ballsStruck: 0,
+      mishitCount: 0,
+      mishitRate: 0,
       best: null,
       worst: null,
     };
   }
+
   const n = scored.length;
-  const sum = (f: (s: WedgeShotResult) => number) =>
-    scored.reduce((acc, s) => acc + f(s), 0);
+  // Bias and spread describe distance CONTROL, so they're over struck balls
+  // only — a shank carries no information about calibration.
+  const struck = scored.filter(
+    (s): s is WedgeShotResult & { deltaYd: number } => s.deltaYd != null,
+  );
+  const mean = (values: number[]) =>
+    values.length === 0
+      ? 0
+      : values.reduce((acc, v) => acc + v, 0) / values.length;
+
   return {
     shots: scored,
     ballsHit: n,
-    averagePoints: sum((s) => s.points) / n,
-    averageBiasYd: sum((s) => s.deltaYd) / n,
-    averageAbsErrorYd: sum((s) => Math.abs(s.deltaYd)) / n,
+    averagePoints: mean(scored.map((s) => s.points)),
+    averageBiasYd: mean(struck.map((s) => s.deltaYd)),
+    averageAbsErrorYd: mean(struck.map((s) => Math.abs(s.deltaYd))),
+    ballsStruck: struck.length,
+    mishitCount: n - struck.length,
+    mishitRate: (n - struck.length) / n,
     best: scored.reduce((a, b) => (b.points > a.points ? b : a)),
     worst: scored.reduce((a, b) => (b.points < a.points ? b : a)),
   };

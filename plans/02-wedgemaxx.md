@@ -84,6 +84,32 @@ Single-shot values at 110 yd: perfect ≈ 124, 3 yd off ≈ 105, 5 yd ≈ 94, 10
 **50 points per stroke gained** is a pure aesthetic knob — it scales spread without changing
 signal-to-noise. It lives as a single named constant so it's trivial to retune.
 
+### Mishits (shanks, tops, duffs)
+
+A shank sideways into the net has no measurable carry, and even when it does, a topped ball says
+nothing about your distance calibration. Both problems need solving: you need a **one-tap escape
+hatch** to log the ball and keep the range rhythm, and the stats need to keep strike quality
+separate from distance control.
+
+A mishit is defined as **zero progress** — the ball ends as far from the pin as it started, so
+`Exp(end) = Exp(start)` and the shot is worth exactly **one wasted stroke** (`SG = −1`). Three
+properties make this the right definition:
+
+- It's principled, not an arbitrary penalty — it's literally what a top or duff does.
+- It lands ~41 points at every target, always **below the worst realistic distance miss**
+  (a 40-yard miss scores 45–57). So marking a merely-bad shot as a mishit is never the cheap way
+  out — **the escape hatch cannot be gamed**.
+- It costs ~1.5 points off a 40-ball average: noticeable, not session-ruining.
+
+A mishit **counts as a ball hit** and drags the average down, but is **excluded from bias and
+spread** (folding one in as a huge "short" miss would poison the coachable number). **Mishit rate**
+becomes its own strike-quality stat alongside distance control.
+
+In the data model, `carry_distance` is **nullable, and null _is_ the mishit flag** — a single
+source of truth, so a shot can never be in the contradictory state of being flagged a mishit while
+also carrying a distance. `deltaYd` is likewise `null` rather than `0` for a mishit, so it can't
+be silently averaged into the distance-control stats.
+
 ### Why derive points instead of storing them
 
 Only `target_distance` and `carry_distance` are persisted; points are always recomputed by the
@@ -118,6 +144,7 @@ matching `FeedCard`'s visual treatment. A "+" starts a new session.
 - A large **target yardage** — uniform random whole yards in `[min, max]`, never repeating the
   immediately-preceding target.
 - A big carry-distance input, **autofocused with the keyboard up** so the loop is type → submit.
+- A **Mishit** button beside it — one tap to log a shank/top you can't measure, and move on.
 - Submitting scores the shot and advances to the next ball with a new target.
 - Previous shots listed underneath as rows: target, carry, signed delta, proximity, points.
   **Tap any row to edit** a mistyped carry; points recompute.
@@ -125,9 +152,10 @@ matching `FeedCard`'s visual treatment. A "+" starts a new session.
   scores over shots actually taken) and **Discard session** (delete entirely, with confirmation).
   Backing out just pauses.
 
-**Summary screen.** Hero **average points**, plus balls hit, duration, best/worst shot, and —
-the genuinely coachable number — **average signed bias** (are you systematically short?). A
-per-distance-bucket breakdown (short/mid/long) is a natural stretch, mirroring Advanced Stats.
+**Summary screen.** Hero **average points**, plus balls hit, duration, best/worst shot,
+**mishit rate**, and — the genuinely coachable number — **average signed bias** (are you
+systematically short?). A per-distance-bucket breakdown (short/mid/long) is a natural stretch,
+mirroring Advanced Stats.
 
 ## Data model
 
@@ -135,7 +163,8 @@ Two new tables, same RLS + per-user isolation pattern as `rounds`/`holes`/`shots
 
 - `wedge_sessions` — `user_id`, `client_uuid`, `started_at`, `status` (in_progress|complete),
   `ball_count`, `min_distance`, `max_distance`, `elapsed_seconds`, timestamps.
-- `wedge_shots` — `session_id`, `shot_number`, `target_distance`, `carry_distance`, timestamps.
+- `wedge_shots` — `session_id`, `shot_number`, `target_distance`, `carry_distance` (**nullable —
+  null means mishit**), timestamps.
 
 ## Architecture
 

@@ -101,6 +101,96 @@ describe("points curve", () => {
   });
 });
 
+describe("mishits", () => {
+  const targets = [50, 80, 110, 140];
+
+  it("scores exactly one wasted stroke at every target", () => {
+    // A mishit makes zero progress: the ball ends as far away as it started.
+    for (const target of targets) {
+      expect(wedgeShotSg(target, null)).toBeCloseTo(-1, 10);
+    }
+  });
+
+  it("always scores below the worst realistic miss, so it can't be gamed", () => {
+    // If marking a bad shot as a mishit ever scored better than owning the
+    // bad number, the escape hatch would become the cheap way out.
+    for (const target of targets) {
+      const mishit = wedgeShotPoints(target, null);
+      const worstRealMiss = wedgeShotPoints(target, target - 40);
+      expect(mishit).toBeLessThan(worstRealMiss);
+    }
+  });
+
+  it("costs a proportionate amount of a 40-ball average", () => {
+    const cost = (BASE_POINTS - wedgeShotPoints(110, null)) / 40;
+    expect(cost).toBeGreaterThan(1);
+    expect(cost).toBeLessThan(2);
+  });
+
+  it("reports a null delta rather than a misleading zero", () => {
+    const r = scoreShot({ targetDistance: 120, carryDistance: null });
+    expect(r.isMishit).toBe(true);
+    expect(r.deltaYd).toBeNull();
+  });
+
+  it("is excluded from bias and spread but still counts as a ball", () => {
+    const clean = sessionSummary([
+      { targetDistance: 100, carryDistance: 96 },
+      { targetDistance: 100, carryDistance: 104 },
+    ]);
+    const withMishit = sessionSummary([
+      { targetDistance: 100, carryDistance: 96 },
+      { targetDistance: 100, carryDistance: 104 },
+      { targetDistance: 100, carryDistance: null },
+    ]);
+
+    // Distance-control stats are untouched by the shank...
+    expect(withMishit.averageBiasYd).toBeCloseTo(clean.averageBiasYd, 10);
+    expect(withMishit.averageAbsErrorYd).toBeCloseTo(
+      clean.averageAbsErrorYd,
+      10,
+    );
+    expect(withMishit.ballsStruck).toBe(2);
+    // ...but it counts as a ball hit and drags the score down.
+    expect(withMishit.ballsHit).toBe(3);
+    expect(withMishit.averagePoints).toBeLessThan(clean.averagePoints);
+  });
+
+  it("tracks mishit rate as its own strike-quality metric", () => {
+    const s = sessionSummary([
+      { targetDistance: 100, carryDistance: 96 },
+      { targetDistance: 100, carryDistance: null },
+      { targetDistance: 100, carryDistance: 104 },
+      { targetDistance: 100, carryDistance: null },
+    ]);
+    expect(s.mishitCount).toBe(2);
+    expect(s.mishitRate).toBeCloseTo(0.5, 10);
+  });
+
+  it("is normally the worst ball of a session", () => {
+    const s = sessionSummary([
+      { targetDistance: 100, carryDistance: 70 },
+      { targetDistance: 100, carryDistance: null },
+      { targetDistance: 100, carryDistance: 99 },
+    ]);
+    expect(s.worst?.isMishit).toBe(true);
+    expect(s.best?.carryDistance).toBe(99);
+  });
+
+  it("handles a session that is nothing but mishits", () => {
+    const s = sessionSummary([
+      { targetDistance: 100, carryDistance: null },
+      { targetDistance: 120, carryDistance: null },
+    ]);
+    expect(s.ballsStruck).toBe(0);
+    expect(s.mishitRate).toBe(1);
+    // No struck balls means no calibration signal — not a divide-by-zero.
+    expect(s.averageBiasYd).toBe(0);
+    expect(s.averageAbsErrorYd).toBe(0);
+    expect(Number.isFinite(s.averagePoints)).toBe(true);
+  });
+});
+
 describe("tour reference derivation", () => {
   it("derives tour distance error matching published 3-5 yard dispersion", () => {
     for (const target of [50, 90, 130, 140]) {

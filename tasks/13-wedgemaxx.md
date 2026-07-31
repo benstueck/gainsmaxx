@@ -8,15 +8,16 @@ and the sanity checks against published tour dispersion data.
 
 ## Decisions confirmed with the user
 
-| Question           | Decision                                                                                                                |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| End-position model | Proximity floored at **1 yd** (no hole-outs); putt in feet within 30 yd, **fairway in yards beyond 30 yd**              |
-| Score anchor       | **Scratch = 100 points at every target distance** (`σ_scratch = 1.5 × σ_tour`), calibrated on `E[sgRaw]`, 50 pts/stroke |
-| Timer              | **Informational only** — pauses when you back out, stored, shown on summary + feed card                                 |
-| Offline            | **Full offline support now** — reuse the existing Dexie draft-queue pattern; gotchas are known                          |
-| Editing shots      | **Tap any previous row to edit** a mistyped carry; points recompute                                                     |
-| Target generation  | Uniform random **whole yards**, **never repeating the immediately-preceding target**                                    |
-| Profile stats      | **Yes** — Wedgemaxx block: sessions completed, career average points, best session                                      |
+| Question           | Decision                                                                                                                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| End-position model | Proximity floored at **1 yd** (no hole-outs); putt in feet within 30 yd, **fairway in yards beyond 30 yd**                                                                          |
+| Score anchor       | **Scratch = 100 points at every target distance** (`σ_scratch = 1.5 × σ_tour`), calibrated on `E[sgRaw]`, 50 pts/stroke                                                             |
+| Timer              | **Informational only** — pauses when you back out, stored, shown on summary + feed card                                                                                             |
+| Offline            | **Full offline support now** — reuse the existing Dexie draft-queue pattern; gotchas are known                                                                                      |
+| Editing shots      | **Tap any previous row to edit** a mistyped carry; points recompute                                                                                                                 |
+| Target generation  | Uniform random **whole yards**, **never repeating the immediately-preceding target**                                                                                                |
+| Mishits            | One-tap **Mishit** button = zero progress = `SG −1` (~41 pts). Counts as a ball, excluded from bias/spread, tracked as its own mishit rate. `carry_distance = null` **is** the flag |
+| Profile stats      | **Yes** — Wedgemaxx block: sessions completed, career average points, best session                                                                                                  |
 
 ## Phase 1 — Scoring engine (`lib/wedge/`) — **done**
 
@@ -26,7 +27,10 @@ and the sanity checks against published tour dispersion data.
       never repeating the previous target; takes an injectable `random` so tests are
       deterministic). `BASE_POINTS = 100` and `POINTS_PER_STROKE = 50` are named constants.
 - [x] `lib/wedge/types.ts` + `lib/wedge/index.ts` public API, mirroring `lib/sg/`
-- [x] 25 tests in `lib/wedge/engine.test.ts`, all green
+- [x] Mishit support: `carryDistance: null` is the flag; `MISHIT_SG = −1` (zero progress);
+      `sessionSummary` reports `ballsStruck`, `mishitCount`, `mishitRate` and keeps bias/spread
+      over struck balls only
+- [x] 33 tests in `lib/wedge/engine.test.ts`, all green
 
 **Deviation from plan:** `referenceSg` memoizes per whole yard rather than interpolating a coarse
 grid — targets are always integers, and the whole suite (including ~60k simulated shots) runs in
@@ -47,7 +51,8 @@ Derived tour distance error: 2.4 yd @50 → 5.0 yd @140. Scratch simulation aver
 
 ## Phase 2 — Schema
 
-- [ ] `wedge_sessions` + `wedge_shots` in `lib/db/schema.ts` (columns per the design plan)
+- [ ] `wedge_sessions` + `wedge_shots` in `lib/db/schema.ts` (columns per the design plan) —
+      note `carry_distance` must be **nullable**, since null is how a mishit is recorded
 - [ ] `npm run db:generate`, then a companion **hand-written SQL migration** for RLS + per-user
       policies — Drizzle doesn't model RLS, same as `0001_supabase_rls.sql`
 - [ ] Apply to the live project (`npm run db:migrate`) — **confirm with the user first**, it's the
@@ -76,6 +81,7 @@ Derived tour distance error: 2.4 yd @50 → 5.0 yd @140. Scratch simulation aver
 - [ ] `app/wedgemaxx/[id]/page.tsx` + `components/wedge/wedge-session.tsx`
 - [ ] Elapsed timer (pauses on leave), "Ball X of N", large target yardage
 - [ ] Carry input **autofocused with the keyboard up**; submit → score → next ball
+- [ ] **Mishit** button beside the input — one tap, no number needed, advances to the next ball
 - [ ] Previous shots as rows (target, carry, signed delta, proximity, points), **tap to edit**
 - [ ] **⋯ menu**: **End session** (finish early, score over shots taken) and **Discard session**
       (delete, with `ConfirmDialog`) — reuse the round-session patterns, including the
@@ -85,7 +91,7 @@ Derived tour distance error: 2.4 yd @50 → 5.0 yd @140. Scratch simulation aver
 ## Phase 6 — Summary
 
 - [ ] `app/wedgemaxx/[id]/summary/page.tsx` — hero average points, balls, duration, best/worst,
-      **average signed bias**
+      **average signed bias**, **mishit rate**
 - [ ] Optional stretch: per-distance-bucket breakdown (short/mid/long), mirroring Advanced Stats
 
 ## Phase 7 — Offline
