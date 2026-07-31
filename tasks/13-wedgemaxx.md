@@ -1,6 +1,6 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** plan confirmed with user — ready to implement, no code written yet
+**Status:** Phase 1 (scoring engine) done + tested; Phases 2–8 not started
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -18,21 +18,32 @@ and the sanity checks against published tour dispersion data.
 | Target generation  | Uniform random **whole yards**, **never repeating the immediately-preceding target**                                    |
 | Profile stats      | **Yes** — Wedgemaxx block: sessions completed, career average points, best session                                      |
 
-## Phase 1 — Scoring engine (`lib/wedge/`)
+## Phase 1 — Scoring engine (`lib/wedge/`) — **done**
 
-- [ ] `lib/wedge/engine.ts`, pure and dependency-free like `lib/sg/` (no framework/IO imports):
-  - `tourProximityYd(target)` — solve for proximity where `sgRaw = 0`
-  - `tourSigma(target)` = `tourProximityYd(target) / 1.253`
-  - `wedgeShotSg(target, carry)` — the raw geometry (1-yd floor, 30-yd lie switch)
-  - `referenceSg(target)` — `E[sgRaw]` over `N(0, 1.5 × σ_tour)`, memoized over a coarse grid
-    and interpolated (the integration is too slow to run per-shot)
-  - `wedgeShotPoints(target, carry)` = `100 + POINTS_PER_STROKE × (sgRaw − ref)`
-  - `sessionSummary(shots)` — average points, balls, best/worst, **average signed bias**
-  - `POINTS_PER_STROKE = 50` as a single named, retunable constant
-- [ ] `lib/wedge/index.ts` public API, mirroring `lib/sg/index.ts`
-- [ ] Tests: the 1-yd floor (no hole-out cliff), monotonicity of points as error grows, boundary
-      continuity at 30 yd, **scratch averaging ~100 at 50/90/140 via simulation**, and that
-      points never go negative across the realistic input range
+- [x] `lib/wedge/engine.ts`, pure (only imports the equally-pure `lib/sg`):
+      `tourProximityYd`, `tourSigmaYd`, `tourDistanceErrorYd`, `wedgeShotSg`, `referenceSg`,
+      `wedgeShotPoints`, `scoreShot`, `sessionSummary`, plus `nextTarget` (uniform whole yards,
+      never repeating the previous target; takes an injectable `random` so tests are
+      deterministic). `BASE_POINTS = 100` and `POINTS_PER_STROKE = 50` are named constants.
+- [x] `lib/wedge/types.ts` + `lib/wedge/index.ts` public API, mirroring `lib/sg/`
+- [x] 25 tests in `lib/wedge/engine.test.ts`, all green
+
+**Deviation from plan:** `referenceSg` memoizes per whole yard rather than interpolating a coarse
+grid — targets are always integers, and the whole suite (including ~60k simulated shots) runs in
+80 ms, so the extra machinery wasn't warranted.
+
+**Verified live output** (matches the plan's projections exactly):
+
+| Miss  | 50 yd | 90 yd | 140 yd |
+| ----- | ----- | ----- | ------ |
+| 0 yd  | 123   | 128   | 135    |
+| 5 yd  | 86    | 91    | 98     |
+| 10 yd | 76    | 81    | 88     |
+| 20 yd | 64    | 69    | 77     |
+| 40 yd | 45    | 50    | 57     |
+
+Derived tour distance error: 2.4 yd @50 → 5.0 yd @140. Scratch simulation averages 100.0 at 50,
+90 and 140 (asserted in tests, seeded PRNG so it can't flake).
 
 ## Phase 2 — Schema
 
