@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { List, Plus, User, type LucideIcon } from "lucide-react";
+import { List, Target, User, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GuardedLink } from "@/components/shell/guarded-link";
 
@@ -9,12 +9,15 @@ type Tab = {
   href: string;
   label: string;
   icon: LucideIcon;
-  primary?: boolean;
 };
 
+// Three destinations, no action button: starting a round moved to a "+" in
+// the Feed header when Wedgemaxx took the middle slot. Every tab is a
+// GuardedLink — none of these pages is guaranteed cached for a given offline
+// session, and landing on an uncached one is a dead end with no way back.
 const tabs: Tab[] = [
   { href: "/feed", label: "Rounds", icon: List },
-  { href: "/round/new", label: "New round", icon: Plus, primary: true },
+  { href: "/wedgemaxx", label: "Wedgemaxx", icon: Target },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
@@ -24,28 +27,13 @@ export function TabBar() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background pb-safe">
       <ul className="mx-auto flex max-w-md items-stretch justify-around">
-        {tabs.map(({ href, label, icon: Icon, primary }) => {
+        {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
-          if (primary) {
-            return (
-              <li key={href} className="flex-1">
-                <GuardedLink
-                  href={href}
-                  aria-label={label}
-                  skipGuard={active}
-                  className="flex min-h-tap flex-col items-center justify-center"
-                >
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95">
-                    <Icon size={30} strokeWidth={2.5} />
-                  </span>
-                </GuardedLink>
-              </li>
-            );
-          }
           return (
             <li key={href} className="flex-1">
               <GuardedLink
                 href={href}
+                // Navigating to the tab you're already on can't fail offline.
                 skipGuard={active}
                 className={cn(
                   "flex min-h-tap flex-col items-center justify-center gap-1 text-xs font-medium",

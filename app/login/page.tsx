@@ -10,7 +10,7 @@ export default async function LoginPage() {
       <div className="text-center">
         <span className="text-6xl">⛳️</span>
         <h1 className="mt-2 text-4xl font-bold tracking-tight">Gainsmaxx</h1>
-        <p className="text-muted">Sign in to track your strokes gained.</p>
+        <p className="text-muted">Sign in to track and sharpen your game.</p>
       </div>
       <AuthForm mode="signin" />
     </main>

@@ -69,13 +69,27 @@ back `avg 88.1 pts | bias −2.3 yd | struck 3 | mishits 1 (25%)`, with the bias
 averaging only the three struck balls. Constraints verified to reject `min > max`, a negative
 carry, and a duplicate shot number.
 
-## Phase 3 — Navigation restructure
+## Phase 3 — Navigation restructure — **done**
 
-- [ ] `components/shell/tab-bar.tsx`: middle tab becomes **Wedgemaxx**; keep Feed and Profile
-- [ ] Move "start a round" to a **"+" in the Feed header** (top right)
-- [ ] Route the new tab through `GuardedLink` consistently with the existing offline rules —
-      the Wedgemaxx tab itself is a normal guarded navigation; **starting a new session** needs
-      connectivity like starting a round does
+- [x] `components/shell/tab-bar.tsx`: middle tab is now **Wedgemaxx** (`Target` icon). The
+      primary/FAB variant is gone — all three slots are now destinations rather than one being
+      an action, so they render uniformly.
+- [x] "Start a round" moved to a **"+" in the Feed header**, kept as a `GuardedLink` because it
+      creates a server row (unlike _resuming_ a round, which works offline)
+- [x] `app/(app)/wedgemaxx/page.tsx` — a real destination so the new tab can't dead-end. Lists
+      sessions with a proper empty state; Phase 4 adds the setup "+" and styled cards.
+- [x] Feed empty-state copy updated ("Tap + **above**") — it used to point at the tab bar
+
+**Offline-guard behaviour preserved exactly:** every tab is still a `GuardedLink` with
+`skipGuard={active}`. The one deliberate asymmetry is that the Feed "+" is _not_ skipGuarded —
+starting a round needs connectivity. When on `/round/new` no tab matches, so all three guard
+normally, which is correct.
+
+**Verified:** `/wedgemaxx` redirects to `/login` when signed out (route exists and is
+auth-protected, not a 404), no console errors, build registers the route.
+**Not verified:** the authenticated tab bar itself — no test-account credentials this session.
+
+Also fixed a rebrand loose end: the login tagline still read "track your strokes gained".
 
 ## Phase 4 — Session feed + setup
 

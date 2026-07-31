@@ -1,8 +1,10 @@
+import { Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getProfile } from "@/lib/db/queries";
 import { loadUserRounds } from "@/lib/db/round-queries";
 import { resolveBaseline } from "@/lib/baseline";
 import { FeedCard } from "@/components/round/feed-card";
+import { GuardedLink } from "@/components/shell/guarded-link";
 
 export default async function FeedPage() {
   const user = await requireUser();
@@ -19,14 +21,25 @@ export default async function FeedPage() {
 
   return (
     <main className="mx-auto w-full max-w-md px-5 py-6">
-      <h1 className="text-2xl font-bold tracking-tight">Your rounds</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-tight">Your rounds</h1>
+        {/* Starting a round creates a server row, so this stays guarded —
+            unlike resuming one, which works offline. */}
+        <GuardedLink
+          href="/round/new"
+          aria-label="Start a round"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95"
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </GuardedLink>
+      </div>
 
       {rounds.length === 0 ? (
         <div className="mt-8 rounded-app border border-border bg-surface p-8 text-center text-muted">
           No rounds yet.
           <br />
-          Tap the <span className="font-semibold text-primary">+</span> button
-          to start tracking a round.
+          Tap <span className="font-semibold text-primary">+</span> above to
+          start tracking a round.
         </div>
       ) : (
         <div className="mt-5 flex flex-col gap-3">
