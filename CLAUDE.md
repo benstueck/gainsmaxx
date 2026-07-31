@@ -1,13 +1,15 @@
-# CLAUDE.md — Gainsmaxxing (Strokes Gained Golf Tracker)
+# CLAUDE.md — Gainsmaxx (Golf Performance Tracker)
 
 Guidance for Claude Code (and humans) working in this repo. Keep this file current as the
 project evolves — it's the fast path back into context at the start of a session.
 
 ## What this is
 
-A **mobile-first, offline-first PWA** for tracking **strokes gained (SG)** shot-by-shot during
-a golf round, with per-user accounts and a per-round SG breakdown. Built around one primary
-user for now, but as a real multi-user app (accounts + per-user data isolation).
+A **mobile-first, offline-first PWA** for golf performance — **strokes gained (SG)** tracking
+shot-by-shot during a round, with per-user accounts and a per-round SG breakdown, plus
+skill-training modes like **Wedgemaxx** (wedge-distance-control practice sessions scored by SG).
+Built around one primary user for now, but as a real multi-user app (accounts + per-user data
+isolation).
 
 - Full design intent & scope: [`plans/01-design.md`](plans/01-design.md).
 - Resumable task checklists: [`tasks/`](tasks/) (start at [`tasks/README.md`](tasks/README.md)).

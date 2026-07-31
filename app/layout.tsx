@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gainsmaxxing",
-  description: "Track strokes gained shot-by-shot during your round.",
-  applicationName: "Gainsmaxxing",
+  title: "Gainsmaxx",
+  description: "Track strokes gained and sharpen your game.",
+  applicationName: "Gainsmaxx",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Gainsmaxxing",
+    title: "Gainsmaxx",
     statusBarStyle: "default",
   },
   icons: {

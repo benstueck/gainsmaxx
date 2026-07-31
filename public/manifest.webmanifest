@@ -1,7 +1,7 @@
 {
-  "name": "Gainsmaxxing",
-  "short_name": "Gainsmaxxing",
-  "description": "Track strokes gained shot-by-shot during your round.",
+  "name": "Gainsmaxx",
+  "short_name": "Gainsmaxx",
+  "description": "Track strokes gained and sharpen your game.",
   "start_url": "/feed",
   "scope": "/",
   "display": "standalone",

@@ -49,11 +49,12 @@ shown on screen.
 ## Deploy — mostly done
 
 - [x] Decided: reuse the existing Supabase project as production.
-- [x] Deployed to **Vercel** (`bens-projects-3790fb25/gainsmaxxing`) via CLI; all four env vars
-      (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`,
-      `DIRECT_URL`) set for Production. Live at **https://gainsmaxxing.benstueck.com** (custom
-      domain, CNAME verified, valid TLS) and https://gainsmaxxing.vercel.app. GitHub repo
-      connected for auto-deploy-on-push to `main`.
+- [x] Deployed to **Vercel** (originally `bens-projects-3790fb25/gainsmaxxing`, renamed to
+      `gainsmaxx` when the app was rebranded — see the rebrand entry below) via CLI; all four env
+      vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`,
+      `DIRECT_URL`) set for Production. Originally live at gainsmaxxing.benstueck.com /
+      gainsmaxxing.vercel.app; now **https://gainsmaxx.benstueck.com**. GitHub repo connected for
+      auto-deploy-on-push to `main`.
 - [x] Verify PWA install + offline on the deployed URL from a real phone — found and fixed a
       real bug (below); needs a re-test after the fix.
 - [ ] Update `CLAUDE.md` (status, deploy notes, live URL).
@@ -92,6 +93,31 @@ happen to reopen would never sync.
 
 Needs a final re-test on the phone: force-quit mid-round while offline, then try every tab and a
 past round's card while still offline — none should ever leave you stuck.
+
+### Rebrand: Gainsmaxxing → Gainsmaxx
+
+The app is expanding beyond round-by-round SG tracking to a broader golf-performance platform,
+starting with **Wedgemaxx** (a wedge-distance-control practice mode — see
+`tasks/13-wedgemaxx.md` once that plan lands). Renamed to drop the "-ing" and match that
+convention:
+
+- User-facing: app title/metadata (`app/layout.tsx`), PWA manifest name/short_name, the login
+  page heading, `README.md`, `CLAUDE.md`.
+- **Not** renamed: the Dexie offline-database name (`lib/offline/db.ts`, still literally
+  `"gainsmaxxing"`) — it's an internal identifier never shown to a user, and renaming it would
+  orphan any already-queued local offline draft on someone's phone (a new DB name means the old
+  one's data is simply never opened again). Cosmetic rename wasn't worth that risk.
+- GitHub repo renamed `benstueck/gainsmaxxing` → `benstueck/gainsmaxx` (GitHub auto-redirects the
+  old URL). Vercel project renamed to match. New custom domain
+  **https://gainsmaxx.benstueck.com**; the old `gainsmaxxing.benstueck.com` CNAME can be pointed
+  at the same project if you want it to keep resolving, or removed.
+- Local clone directory is still `~/Projects/gainsmaxxing` on disk — rename it yourself with
+  `mv ~/Projects/gainsmaxxing ~/Projects/gainsmaxx` whenever's convenient; git doesn't care about
+  the folder name, only the remote URL.
+- Not changed: the Supabase project's internal display name and its Auth **Site URL** /
+  **Redirect URLs** — worth updating in the Supabase dashboard for consistency, though nothing in
+  the app currently depends on them (no email-confirmation or forgot-password-email flow uses a
+  redirect URL today).
 
 ## Acceptance criteria
 

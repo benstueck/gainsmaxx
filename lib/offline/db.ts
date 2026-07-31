@@ -18,6 +18,10 @@ export interface RoundDraft {
   updatedAt: number;
 }
 
+// Deliberately kept as "gainsmaxxing" through the Gainsmaxx rebrand — an
+// internal identifier never shown to a user, and renaming it would orphan
+// any already-queued local offline draft on someone's phone (a new IndexedDB
+// name means the old one's data is simply never opened again).
 export const offlineDb = new Dexie("gainsmaxxing") as Dexie & {
   roundDrafts: EntityTable<RoundDraft, "roundId">;
 };

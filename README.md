@@ -1,7 +1,7 @@
-# Gainsmaxxing ⛳️
+# Gainsmaxx ⛳️
 
-A mobile-first, **offline-first** PWA for tracking **strokes gained** shot-by-shot during a golf
-round. Next.js 16 + Supabase.
+A mobile-first, **offline-first** PWA for golf performance: **strokes gained** tracking
+shot-by-shot during a round, plus skill-training modes like **Wedgemaxx**. Next.js 16 + Supabase.
 
 - **Design & scope:** [`plans/01-design.md`](plans/01-design.md)
 - **Working context for contributors/agents:** [`CLAUDE.md`](CLAUDE.md)
