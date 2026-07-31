@@ -166,6 +166,78 @@ export const shots = pgTable(
   ],
 );
 
+// --- Wedgemaxx sessions ------------------------------------------------------
+// Wedge distance-control practice. Design + scoring: plans/02-wedgemaxx.md.
+// Reuses roundStatusEnum: it's the identical in_progress/complete state
+// machine, and a second enum type with the same two values would just be a
+// duplicate source of truth.
+export const wedgeSessions = pgTable(
+  "wedge_sessions",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: uuid("user_id").notNull(),
+    // Client-generated id for offline-first idempotent sync.
+    clientUuid: uuid("client_uuid").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    // Session parameters, chosen at setup.
+    ballCount: integer("ball_count").notNull(),
+    minDistance: integer("min_distance").notNull(),
+    maxDistance: integer("max_distance").notNull(),
+    // Active time only — the timer pauses when the user backs out.
+    elapsedSeconds: integer("elapsed_seconds").notNull().default(0),
+    status: roundStatusEnum("status").notNull().default("in_progress"),
+    ...timestamps,
+  },
+  (t) => [
+    unique("wedge_sessions_user_client_uuid_key").on(t.userId, t.clientUuid),
+    check(
+      "wedge_sessions_ball_count_check",
+      sql`${t.ballCount} between 1 and 200`,
+    ),
+    check(
+      "wedge_sessions_distance_check",
+      sql`${t.minDistance} > 0 and ${t.minDistance} <= ${t.maxDistance}`,
+    ),
+    check("wedge_sessions_elapsed_check", sql`${t.elapsedSeconds} >= 0`),
+    index("wedge_sessions_user_started_idx").on(t.userId, t.startedAt),
+  ],
+);
+
+// --- Wedgemaxx shots ---------------------------------------------------------
+export const wedgeShots = pgTable(
+  "wedge_shots",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => wedgeSessions.id, { onDelete: "cascade" }),
+    shotNumber: integer("shot_number").notNull(),
+    // The yardage the app called out, in whole yards.
+    targetDistance: integer("target_distance").notNull(),
+    // Carry actually hit. NULL *is* the mishit flag (shank/top/duff): there's
+    // no meaningful carry to record, and keeping it as the single source of
+    // truth means a shot can never be flagged a mishit while also carrying a
+    // distance. Scored as zero progress — see lib/wedge/engine.ts.
+    carryDistance: integer("carry_distance"),
+    ...timestamps,
+  },
+  (t) => [
+    unique("wedge_shots_session_shot_number_key").on(t.sessionId, t.shotNumber),
+    check("wedge_shots_target_check", sql`${t.targetDistance} > 0`),
+    check(
+      "wedge_shots_carry_check",
+      sql`${t.carryDistance} is null or ${t.carryDistance} >= 0`,
+    ),
+    index("wedge_shots_session_idx").on(t.sessionId),
+  ],
+);
+
 // --- Inferred types ----------------------------------------------------------
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;

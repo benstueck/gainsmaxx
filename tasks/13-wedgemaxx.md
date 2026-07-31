@@ -1,6 +1,6 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** Phase 1 (scoring engine) done + tested; Phases 2–8 not started
+**Status:** Phases 1–2 (scoring engine, schema) done; Phases 3–8 not started
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -49,16 +49,25 @@ grid — targets are always integers, and the whole suite (including ~60k simula
 Derived tour distance error: 2.4 yd @50 → 5.0 yd @140. Scratch simulation averages 100.0 at 50,
 90 and 140 (asserted in tests, seeded PRNG so it can't flake).
 
-## Phase 2 — Schema
+## Phase 2 — Schema — **done**
 
-- [ ] `wedge_sessions` + `wedge_shots` in `lib/db/schema.ts` (columns per the design plan) —
-      note `carry_distance` must be **nullable**, since null is how a mishit is recorded
-- [ ] `npm run db:generate`, then a companion **hand-written SQL migration** for RLS + per-user
-      policies — Drizzle doesn't model RLS, same as `0001_supabase_rls.sql`
-- [ ] Apply to the live project (`npm run db:migrate`) — **confirm with the user first**, it's the
-      production database with real accounts
-- [ ] `lib/db/wedge-queries.ts` — load sessions for the feed and a single session, recomputing
-      points from stored `target`/`carry` (never store derived points)
+- [x] `wedge_sessions` + `wedge_shots` in `lib/db/schema.ts`. `carry_distance` is **nullable** —
+      null _is_ the mishit flag. Reuses `roundStatusEnum` (identical in_progress/complete state
+      machine; a duplicate enum type would just be a second source of truth).
+- [x] `0003_outstanding_wolf_cub.sql` (generated) + hand-written `0004_wedge_rls.sql` for the
+      `auth.users` FK, RLS, and per-user policies (sessions owned via `user_id`, shots
+      transitively via the parent session), registered in `meta/_journal.json`
+- [x] Applied to the live project and **verified in the DB**: both tables present,
+      `carry_distance` nullable, `relrowsecurity = true` on both, both policies active
+- [x] `lib/db/wedge-queries.ts` — `loadWedgeSession`, `loadUserWedgeSessions` (2 queries total
+      regardless of session count), `lastWedgeSessionParams` for prefilling setup. Points are
+      always derived, never read from a stored column.
+
+**Round-trip smoke test** (run inside a rolled-back transaction, nothing persisted): a 4-ball
+session with one mishit stored and re-read correctly — mishit persisted as NULL, summary came
+back `avg 88.1 pts | bias −2.3 yd | struck 3 | mishits 1 (25%)`, with the bias correctly
+averaging only the three struck balls. Constraints verified to reject `min > max`, a negative
+carry, and a duplicate shot number.
 
 ## Phase 3 — Navigation restructure
 

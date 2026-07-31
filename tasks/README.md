@@ -20,12 +20,10 @@ criteria**. Work top-down; keep checkboxes and the status line honest so any ses
 | 10  | [Offline-first & PWA](10-offline-pwa.md)                              | done        | Serwist (Turbopack) + Dexie sync — verified full offline round + finish              |
 | 11  | [QA & deploy](11-qa-deploy.md)                                        | in progress | Deployed live to gainsmaxx.benstueck.com; final on-phone offline re-test outstanding |
 | 12  | [Advanced stats (distance breakdown + FIR/GIR)](12-advanced-stats.md) | in progress | Implemented + unit tested; not yet verified in the browser                           |
-| 13  | [Wedgemaxx](13-wedgemaxx.md)                                          | in progress | Phase 1 scoring engine done, 25 tests green; schema + UI not started                 |
+| 13  | [Wedgemaxx](13-wedgemaxx.md)                                          | in progress | Engine + schema done (migration applied to prod, RLS verified); UI not started       |
 
 ## Blocked-on-user
 
-- **Milestone 13 will need a production migration** (`wedge_sessions` / `wedge_shots` + RLS)
-  applied to the live Supabase project — confirm before running `npm run db:migrate`.
 - Handicap SHORT/PUTT values are research-based approximations (see `data/benchmarks/README.md`);
   swap in authoritative numbers if obtained. Non-blocking.
 
