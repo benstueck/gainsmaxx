@@ -22,7 +22,12 @@ export default async function FeedPage() {
   return (
     <main className="mx-auto w-full max-w-md px-5 py-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Your rounds</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Gainsmaxx</h1>
+          <p className="mt-1 text-sm text-muted">
+            Your rounds, scored by strokes gained.
+          </p>
+        </div>
         {/* Starting a round creates a server row, so this stays guarded —
             unlike resuming one, which works offline. */}
         <GuardedLink

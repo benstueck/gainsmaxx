@@ -16,7 +16,7 @@ type Tab = {
 // GuardedLink — none of these pages is guaranteed cached for a given offline
 // session, and landing on an uncached one is a dead end with no way back.
 const tabs: Tab[] = [
-  { href: "/feed", label: "Rounds", icon: List },
+  { href: "/feed", label: "Gainsmaxx", icon: List },
   { href: "/wedgemaxx", label: "Wedgemaxx", icon: Target },
   { href: "/profile", label: "Profile", icon: User },
 ];
