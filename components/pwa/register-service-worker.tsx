@@ -2,13 +2,14 @@
 
 import { useEffect } from "react";
 import { flushAllDrafts } from "@/lib/offline/round-sync";
+import { flushAllWedgeDrafts } from "@/lib/offline/wedge-sync";
 
 /** Registers the service worker built from app/sw.ts (served via the
  *  app/serwist/[path] route) so the app becomes installable and its shell
  *  gets cached for offline use. Also opportunistically flushes any queued
- *  offline round drafts — the safety net for a draft left behind when the
- *  round's own page never got reopened (e.g. the app relaunched straight
- *  into Feed instead of the in-progress round). */
+ *  offline drafts — rounds and Wedgemaxx sessions alike — the safety net for
+ *  a draft left behind when its own page never got reopened (e.g. the app
+ *  relaunched straight into Feed instead of the in-progress round). */
 export function RegisterServiceWorker() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -23,9 +24,13 @@ export function RegisterServiceWorker() {
   }, []);
 
   useEffect(() => {
-    void flushAllDrafts();
-    window.addEventListener("online", flushAllDrafts);
-    return () => window.removeEventListener("online", flushAllDrafts);
+    const flush = () => {
+      void flushAllDrafts();
+      void flushAllWedgeDrafts();
+    };
+    flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
   }, []);
 
   return null;

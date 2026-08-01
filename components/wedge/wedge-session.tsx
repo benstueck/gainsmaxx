@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { X, Flag, MoreVertical } from "lucide-react";
+import { X, Flag, MoreVertical, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BigButton } from "@/components/ui/big-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -21,6 +21,23 @@ import {
   sessionSummary,
 } from "@/lib/wedge";
 import type { WedgeShot } from "@/lib/wedge";
+import {
+  clearWedgeDraft,
+  getWedgeDraft,
+  putWedgeDraft,
+} from "@/lib/offline/wedge-sync";
+
+/** Next.js encodes a successful redirect() as a thrown "NEXT_REDIRECT" digest
+ *  rather than a normal return — distinguish that from a real sync failure. */
+function isRedirectError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "digest" in err &&
+    typeof (err as { digest?: unknown }).digest === "string" &&
+    (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
 
 export function WedgeSession({
   sessionId,
@@ -49,7 +66,9 @@ export function WedgeSession({
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, startDiscard] = useTransition();
-  const [, startSave] = useTransition();
+  const [syncStatus, setSyncStatus] = useState<"synced" | "saving" | "offline">(
+    "synced",
+  );
   const offlineGuard = useOfflineGuard();
 
   // Legacy fallback only: sessions created before targets were pre-rolled
@@ -95,10 +114,24 @@ export function WedgeSession({
   const isEditing = editing != null;
   const editedShot = isEditing ? shots[editing] : null;
 
+  // Local-first save: try Supabase, and if that fails (offline or a transient
+  // error) queue the state in IndexedDB rather than losing it.
+  async function attemptSave(nextShots: WedgeShot[]): Promise<boolean> {
+    setSyncStatus("saving");
+    try {
+      await saveWedgeSession(sessionId, nextShots, elapsedRef.current);
+      await clearWedgeDraft(sessionId);
+      setSyncStatus("synced");
+      return true;
+    } catch {
+      await putWedgeDraft(sessionId, nextShots, elapsedRef.current, false);
+      setSyncStatus("offline");
+      return false;
+    }
+  }
+
   function persist(updated: WedgeShot[]) {
-    startSave(() => {
-      void saveWedgeSession(sessionId, updated, elapsedRef.current);
-    });
+    void attemptSave(updated);
   }
 
   function record(carryDistance: number | null) {
@@ -135,19 +168,71 @@ export function WedgeSession({
     persist(updated);
   }
 
-  async function onFinish() {
-    setFinishing(true);
+  // Same idea for finishing — a queued finish is retried from a live, mounted
+  // session until it reaches the server, at which point its redirect to the
+  // summary fires normally.
+  async function attemptFinish(nextShots: WedgeShot[]): Promise<boolean> {
+    await putWedgeDraft(sessionId, nextShots, elapsedRef.current, true);
     try {
-      await finishWedgeSession(sessionId, shots, elapsedRef.current);
+      await finishWedgeSession(sessionId, nextShots, elapsedRef.current);
+      await clearWedgeDraft(sessionId);
+      setSyncStatus("synced");
+      return true;
     } catch (err) {
-      // A successful finish redirects, which Next throws as NEXT_REDIRECT.
-      const digest = (err as { digest?: string })?.digest;
-      if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
+      if (isRedirectError(err)) {
+        // finishWedgeSession succeeded — Next just encodes that as a thrown
+        // redirect, so the two lines above never ran. Clearing here matters:
+        // skipping it is exactly the bug that left stale drafts behind in the
+        // round flow.
+        await clearWedgeDraft(sessionId);
+        setSyncStatus("synced");
         throw err;
       }
-      setFinishing(false);
+      setSyncStatus("offline");
+      return false;
     }
   }
+
+  async function onFinish() {
+    setFinishing(true);
+    const ok = await attemptFinish(shots);
+    // On success the redirect already threw; only a queued finish lands here.
+    if (!ok) setFinishing(false);
+  }
+
+  // On mount, a leftover local draft (from a sync that never succeeded — e.g.
+  // the page reloaded while offline) takes priority over the server's copy:
+  // it's strictly newer, since it only exists because a push already failed.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const draft = await getWedgeDraft(sessionId);
+      if (cancelled || !draft) return;
+      setShots(draft.shots);
+      setElapsed(draft.elapsedSeconds);
+      elapsedRef.current = draft.elapsedSeconds;
+      if (draft.wantsFinish) await attemptFinish(draft.shots);
+      else await attemptSave(draft.shots);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once per mounted session (sessionId is stable for its lifetime).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Retry whatever's queued the moment connectivity returns.
+  useEffect(() => {
+    async function retry() {
+      const draft = await getWedgeDraft(sessionId);
+      if (!draft) return;
+      if (draft.wantsFinish) await attemptFinish(draft.shots);
+      else await attemptSave(draft.shots);
+    }
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // h-dvh (a DEFINITE height), not min-h-full or min-h-dvh. Flexbox only
   // shrinks children when the container has a definite size — with a
@@ -171,9 +256,17 @@ export function WedgeSession({
               Ball {ballNumber} of {ballCount}
             </div>
             <div className="text-xs text-muted tabular-nums">
-              {formatClock(elapsed)}
-              {summary.ballsHit > 0 &&
-                ` · Avg ${summary.averagePoints.toFixed(1)}`}
+              {syncStatus === "offline" ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-negative">
+                  <WifiOff size={12} /> Saved locally
+                </span>
+              ) : (
+                <>
+                  {formatClock(elapsed)}
+                  {summary.ballsHit > 0 &&
+                    ` · Avg ${summary.averagePoints.toFixed(1)}`}
+                </>
+              )}
             </div>
           </div>
           <button
@@ -298,7 +391,13 @@ export function WedgeSession({
         {/* Entry dock */}
         <div className="shrink-0 border-t border-border bg-background px-4 pb-safe pt-3">
           {allBallsHit && !isEditing ? (
-            <div className="pb-3">
+            <div className="flex flex-col gap-2 pb-3">
+              {syncStatus === "offline" && (
+                <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-negative">
+                  <WifiOff size={14} /> Offline — will finish syncing once
+                  you&rsquo;re back online.
+                </p>
+              )}
               <BigButton block onClick={onFinish} disabled={finishing}>
                 <Flag size={20} /> {finishing ? "Finishing…" : "Finish session"}
               </BigButton>

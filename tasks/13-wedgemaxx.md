@@ -1,7 +1,8 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** Phases 1–6 done — playable end to end (create → log balls → mishits → edit → end
-early / finish → summary). Remaining: offline (7), profile (8).
+**Status:** Phases 1–7 code-complete — playable end to end (create → log balls → mishits → edit →
+end early / finish → summary) and offline-resilient. Remaining: profile stats (8), plus on-phone
+verification of Phases 5 and 7.
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -163,7 +164,7 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       roll-one-at-a-time path, so nothing in flight broke.
 
       Verified: generated sequences are whole yards in range with no adjacent repeats, and the
-          `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
+                      `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.
@@ -187,13 +188,33 @@ verified against the real compiled CSS, but the timer, row-editing and ⋯ menu 
       redirects complete sessions there instead of bouncing to the list
 - [ ] Optional stretch: per-distance-bucket breakdown (short/mid/long), mirroring Advanced Stats
 
-## Phase 7 — Offline
+## Phase 7 — Offline — **code done, on-phone verification outstanding**
 
-- [ ] Dexie **version 2** migration adding `wedgeDrafts` — must not disturb existing
-      `roundDrafts` data (see the note in `lib/offline/db.ts` about not orphaning local drafts)
-- [ ] `lib/offline/wedge-sync.ts` mirroring `round-sync.ts`; wire `flushAllDrafts` to cover both
+- [x] Dexie **version 2** adding `wedgeDrafts`. v1 stays declared so existing installs upgrade
+      rather than reset. **Verified in the browser:** planted a v1 database holding a round draft,
+      loaded the app, and confirmed it upgraded to both stores with the legacy draft fully intact
+      (`wantsFinish` and holes preserved) — the orphaned-data risk called out in `db.ts` does not
+      materialise. Also confirmed a wedge draft roundtrips with a mishit still `null`.
+- [x] `lib/offline/wedge-sync.ts` mirroring `round-sync.ts` — get/put/clear plus
+      `flushAllWedgeDrafts`, which skips queued finishes (a finish redirects to the summary, which
+      has to happen from a live mounted session rather than a background sweep)
+- [x] `components/wedge/wedge-session.tsx` is local-first: `attemptSave` / `attemptFinish` try the
+      server and queue to IndexedDB on failure, with mount-time draft recovery and an `online`
+      listener that retries. Header shows "Saved locally" and the finish dock warns when queued.
+      **The redirect-success path clears the draft** — skipping that is exactly the bug that left
+      stale drafts behind in Milestone 10.
+- [x] `RegisterServiceWorker` flushes both round and wedge drafts on load and on reconnect
 - [ ] Verify on a real phone: full offline session, offline End Session, force-quit + relaunch
       recovery — the exact scenarios that surfaced real bugs in Milestone 10/11
+
+**Known gap — reaching an in-progress session offline after a relaunch.** The PWA relaunches at
+`start_url` (`/feed`), and the Wedgemaxx tab is a `GuardedLink`, so while offline you can't
+navigate to `/wedgemaxx` to resume. Rounds don't have this problem because `/feed` _is_ the round
+list. The session itself survives signal loss perfectly while it stays open, which is the main
+range scenario; this only bites if the app is force-quit mid-session while offline. The real fix
+is probably a **cache-aware guard** (`caches.match()` the destination and allow the navigation
+when a cached copy exists) rather than relying on `navigator.onLine` alone — that would fix every
+navigation case, not just this one. Not attempted yet; flagged for a follow-up.
 
 ## Phase 8 — Profile
 
