@@ -60,13 +60,18 @@ Sanity check against published data — this yields tour distance errors of **2.
 3.2 @ 90, 4.4 @ 130, **5.0 yd @ 140**, matching the reported
 [3–5 yard tour wedge dispersion](https://www.scoringzone.net/blog/golf-wedge-distances-chart.html).
 
-**Anchor: scratch = 100 points at every target distance.** Scratch is modelled as
-`σ_scratch = 1.5 × σ_tour`.
+**Anchor: PGA Tour average = 100 points at every target distance.**
 
 ```
-ref(target) = E[ sgRaw(target, e) ]  where e ~ N(0, σ_scratch(target))
+ref(target) = E[ sgRaw(target, e) ]  where e ~ N(0, σ_tour(target))
 points      = 100 + 50 × (sgRaw − ref(target))
 ```
+
+> **Retuned after real use.** This originally anchored on _scratch_
+> (`σ = 1.5 × σ_tour`), which real sessions showed was far too generous — breaking 100 was easy,
+> which drains the number of meaning. Anchoring on tour makes 100 genuinely hard: you have to
+> out-control a tour pro distance-wise. Because points are always derived and never stored,
+> flipping the constant re-scored every historical session automatically.
 
 **Use the expectation, not the score at the mean error.** The points curve is convex, so a
 player's session average is ~7 points higher than their score at their average error. Calibrating
@@ -74,12 +79,22 @@ on `E[sgRaw]` makes the anchor exact by linearity of expectation.
 
 ### Expected results (simulated, 40 balls, targets 50–140)
 
-| Tour | Scratch | Low single digit | Mid handicap | High handicap |
-| ---- | ------- | ---------------- | ------------ | ------------- |
-| 107  | **100** | 95               | 88           | 83            |
+| Tour    | Scratch | Low single digit | Mid handicap | High handicap |
+| ------- | ------- | ---------------- | ------------ | ------------- |
+| **100** | 93      | 88               | 81           | 76            |
 
-Single-shot values at 110 yd: perfect ≈ 124, 3 yd off ≈ 105, 5 yd ≈ 94, 10 yd ≈ 84, 20 yd ≈ 72,
-40 yd ≈ 53. Smooth, monotonic, never negative.
+Single-shot values (tour anchor):
+
+| Miss   | 50 yd | 90 yd | 140 yd |
+| ------ | ----- | ----- | ------ |
+| 0 yd   | 116   | 121   | 129    |
+| 5 yd   | 79    | 84    | 92     |
+| 10 yd  | 69    | 74    | 82     |
+| 20 yd  | 58    | 62    | 70     |
+| 40 yd  | 38    | 43    | 51     |
+| Mishit | 36    | 34    | 35     |
+
+Smooth, monotonic, never negative.
 
 **50 points per stroke gained** is a pure aesthetic knob — it scales spread without changing
 signal-to-noise. It lives as a single named constant so it's trivial to retune.
@@ -143,7 +158,9 @@ matching `FeedCard`'s visual treatment. A "+" starts a new session.
 - **Ball X of N**.
 - A large **target yardage** — uniform random whole yards in `[min, max]`, never repeating the
   immediately-preceding target.
-- A big carry-distance input, **autofocused with the keyboard up** so the loop is type → submit.
+- An **always-visible custom numeric keypad** (`NumericKeypad`, shared with round tracking) —
+  explicitly **not** the OS keyboard. The native keyboard shifts the viewport and covers the
+  target yardage you're aiming at, and stays open across balls so you can't see the next target.
 - A **Mishit** button beside it — one tap to log a shank/top you can't measure, and move on.
 - Submitting scores the shot and advances to the next ball with a new target.
 - Previous shots listed underneath as rows: target, carry, signed delta, proximity, points.

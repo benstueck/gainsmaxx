@@ -1,7 +1,7 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** Phases 1–4 done and playable end to end (create → log balls → mishits → finish).
-Remaining: timer, tap-to-edit, ⋯ menu (Phase 5), summary page (6), offline (7), profile (8).
+**Status:** Phases 1–4 and 6 done — playable end to end (create → log balls → mishits → finish →
+summary). Remaining: timer, tap-to-edit, ⋯ menu (Phase 5), offline (7), profile (8).
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -9,16 +9,17 @@ and the sanity checks against published tour dispersion data.
 
 ## Decisions confirmed with the user
 
-| Question           | Decision                                                                                                                                                                            |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| End-position model | Proximity floored at **1 yd** (no hole-outs); putt in feet within 30 yd, **fairway in yards beyond 30 yd**                                                                          |
-| Score anchor       | **Scratch = 100 points at every target distance** (`σ_scratch = 1.5 × σ_tour`), calibrated on `E[sgRaw]`, 50 pts/stroke                                                             |
-| Timer              | **Informational only** — pauses when you back out, stored, shown on summary + feed card                                                                                             |
-| Offline            | **Full offline support now** — reuse the existing Dexie draft-queue pattern; gotchas are known                                                                                      |
-| Editing shots      | **Tap any previous row to edit** a mistyped carry; points recompute                                                                                                                 |
-| Target generation  | Uniform random **whole yards**, **never repeating the immediately-preceding target**                                                                                                |
-| Mishits            | One-tap **Mishit** button = zero progress = `SG −1` (~41 pts). Counts as a ball, excluded from bias/spread, tracked as its own mishit rate. `carry_distance = null` **is** the flag |
-| Profile stats      | **Yes** — Wedgemaxx block: sessions completed, career average points, best session                                                                                                  |
+| Question           | Decision                                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| End-position model | Proximity floored at **1 yd** (no hole-outs); putt in feet within 30 yd, **fairway in yards beyond 30 yd**                                                                           |
+| Score anchor       | **PGA Tour average = 100 points at every target distance**, calibrated on `E[sgRaw]`, 50 pts/stroke. (Was scratch; retuned after real sessions showed breaking 100 was far too easy) |
+| Entry input        | **Always-visible custom keypad**, never the OS keyboard — it covers the target yardage and stays open between balls                                                                  |
+| Timer              | **Informational only** — pauses when you back out, stored, shown on summary + feed card                                                                                              |
+| Offline            | **Full offline support now** — reuse the existing Dexie draft-queue pattern; gotchas are known                                                                                       |
+| Editing shots      | **Tap any previous row to edit** a mistyped carry; points recompute                                                                                                                  |
+| Target generation  | Uniform random **whole yards**, **never repeating the immediately-preceding target**                                                                                                 |
+| Mishits            | One-tap **Mishit** button = zero progress = `SG −1` (~41 pts). Counts as a ball, excluded from bias/spread, tracked as its own mishit rate. `carry_distance = null` **is** the flag  |
+| Profile stats      | **Yes** — Wedgemaxx block: sessions completed, career average points, best session                                                                                                   |
 
 ## Phase 1 — Scoring engine (`lib/wedge/`) — **done**
 
@@ -37,18 +38,20 @@ and the sanity checks against published tour dispersion data.
 grid — targets are always integers, and the whole suite (including ~60k simulated shots) runs in
 80 ms, so the extra machinery wasn't warranted.
 
-**Verified live output** (matches the plan's projections exactly):
+**Verified live output** (tour anchor — retuned from scratch after real sessions, see the
+"Scoring retune" note under Phase 4):
 
-| Miss  | 50 yd | 90 yd | 140 yd |
-| ----- | ----- | ----- | ------ |
-| 0 yd  | 123   | 128   | 135    |
-| 5 yd  | 86    | 91    | 98     |
-| 10 yd | 76    | 81    | 88     |
-| 20 yd | 64    | 69    | 77     |
-| 40 yd | 45    | 50    | 57     |
+| Miss   | 50 yd | 90 yd | 140 yd |
+| ------ | ----- | ----- | ------ |
+| 0 yd   | 116   | 121   | 129    |
+| 5 yd   | 79    | 84    | 92     |
+| 10 yd  | 69    | 74    | 82     |
+| 20 yd  | 58    | 62    | 70     |
+| 40 yd  | 38    | 43    | 51     |
+| Mishit | 36    | 34    | 35     |
 
-Derived tour distance error: 2.4 yd @50 → 5.0 yd @140. Scratch simulation averages 100.0 at 50,
-90 and 140 (asserted in tests, seeded PRNG so it can't flake).
+Derived tour distance error: 2.4 yd @50 → 5.0 yd @140. **Tour** simulation averages 100.0 at 50,
+90 and 140 (asserted in tests, seeded PRNG so it can't flake); scratch lands ~93.
 
 ## Phase 2 — Schema — **done**
 
@@ -105,6 +108,18 @@ Also fixed a rebrand loose end: the login tagline still read "track your strokes
       list, running average. Pulled forward from Phase 5 because the "+" would otherwise create a
       session and land on a 404. Finish redirects to the list (Phase 6 will point it at a summary).
 
+### Scoring retune + keypad, after the first real range use
+
+Two things the user hit immediately that only real use surfaces:
+
+- **Breaking 100 was far too easy** (they averaged 114.8). The scratch anchor was too generous, so
+  the reference moved to **PGA Tour average** (`REFERENCE_DISPERSION_MULTIPLIER` 1.5 → 1). Because
+  points are derived and never stored, every historical session re-scored automatically — a
+  completed session went 86.0 → 79.2 with no migration.
+- **The OS keyboard was the wrong input.** It shifted the viewport so the target yardage was cut
+  off, and stayed open across balls so the next target was invisible. Replaced with the
+  always-visible `NumericKeypad` already used by round tracking.
+
 **Two real bugs found by verifying in the browser — neither caught by tsc or eslint:**
 
 1. **`"use server"` files may only export async functions.** `actions.ts` exported `MIN_BALLS`,
@@ -140,10 +155,14 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       offline guard on Discard (it's a real server mutation)
 - [ ] Debounced autosave, same shape as the round session
 
-## Phase 6 — Summary
+## Phase 6 — Summary — **done**
 
-- [ ] `app/wedgemaxx/[id]/summary/page.tsx` — hero average points, balls, duration, best/worst,
-      **average signed bias**, **mishit rate**
+- [x] `app/wedgemaxx/[id]/summary/page.tsx` + `components/wedge/session-summary.tsx` — hero
+      average points, bias / spread / mishit-rate stats, a plain-English read on the bias, an
+      every-ball table (points ≥100 highlighted), and Delete session (offline-guarded)
+- [x] Routing wired so a finished session actually opens it: the session-list card links to
+      `/summary` when complete, `finishWedgeSession` redirects there, and `/wedgemaxx/[id]`
+      redirects complete sessions there instead of bouncing to the list
 - [ ] Optional stretch: per-distance-bucket breakdown (short/mid/long), mirroring Advanced Stats
 
 ## Phase 7 — Offline

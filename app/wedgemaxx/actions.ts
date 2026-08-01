@@ -82,7 +82,7 @@ export async function saveWedgeSession(
     .where(eq(wedgeSessions.id, sessionId));
 }
 
-/** Persist final state, mark complete, and return to the session list. */
+/** Persist final state, mark complete, and open the session's summary. */
 export async function finishWedgeSession(
   sessionId: string,
   shots: WedgeShot[],
@@ -97,7 +97,7 @@ export async function finishWedgeSession(
     .where(
       and(eq(wedgeSessions.id, sessionId), eq(wedgeSessions.userId, user.id)),
     );
-  redirect("/wedgemaxx");
+  redirect(`/wedgemaxx/${sessionId}/summary`);
 }
 
 /** Permanently remove a session and its shots (cascade). */

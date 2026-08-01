@@ -13,7 +13,7 @@ import {
   wedgeShotSg,
 } from "./engine";
 
-/** Mirrors SCRATCH_DISPERSION_MULTIPLIER — the documented anchor contract. */
+/** Scratch is modelled as 1.5x tour dispersion (see plans/02-wedgemaxx.md). */
 const SCRATCH_MULTIPLIER = 1.5;
 
 /** Deterministic PRNG so simulation tests never flake. */
@@ -210,13 +210,14 @@ describe("tour reference derivation", () => {
   });
 });
 
-describe("calibration: scratch averages 100 at every target", () => {
+describe("calibration: tour averages 100 at every target", () => {
   // The whole point of the per-distance reference. Without it a tour player
-  // scores 111 from 50yd but 106 from 140yd, and scratch drifts similarly.
+  // scores 111 from 50yd but only 106 from 140yd — the anchor would drift
+  // with distance instead of meaning the same thing everywhere.
   for (const target of [50, 90, 140]) {
     it(`holds at ${target} yards`, () => {
       const gauss = gaussianFrom(mulberry32(target * 7919));
-      const sigma = tourSigmaYd(target) * SCRATCH_MULTIPLIER;
+      const sigma = tourSigmaYd(target);
       const N = 15000;
       let total = 0;
       for (let i = 0; i < N; i++) {
@@ -226,17 +227,17 @@ describe("calibration: scratch averages 100 at every target", () => {
     });
   }
 
-  it("scores a tour-level player above scratch", () => {
+  it("keeps breaking 100 genuinely hard — scratch lands below it", () => {
     const gauss = gaussianFrom(mulberry32(4242));
-    const sigma = tourSigmaYd(110);
+    const sigma = tourSigmaYd(110) * SCRATCH_MULTIPLIER;
     const N = 15000;
     let total = 0;
     for (let i = 0; i < N; i++) {
       total += wedgeShotPoints(110, 110 + gauss() * sigma);
     }
     const average = total / N;
-    expect(average).toBeGreaterThan(BASE_POINTS + 3);
-    expect(average).toBeLessThan(BASE_POINTS + 12);
+    expect(average).toBeLessThan(BASE_POINTS);
+    expect(average).toBeGreaterThan(BASE_POINTS - 15);
   });
 
   it("memoizes the reference per whole yard", () => {

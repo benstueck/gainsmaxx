@@ -24,7 +24,11 @@ export function SessionCard({ session }: { session: FeedWedgeSession }) {
 
   return (
     <GuardedLink
-      href={`/wedgemaxx/${session.id}`}
+      href={
+        inProgress
+          ? `/wedgemaxx/${session.id}`
+          : `/wedgemaxx/${session.id}/summary`
+      }
       // Resuming an in-progress session is always safe offline — it's the
       // page it was being tracked on, so it's guaranteed cached. A finished
       // session's summary might not be, so that one keeps the guard.

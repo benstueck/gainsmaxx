@@ -1,9 +1,9 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { loadWedgeSession } from "@/lib/db/wedge-queries";
-import { WedgeSession } from "@/components/wedge/wedge-session";
+import { WedgeSessionSummaryView } from "@/components/wedge/session-summary";
 
-export default async function WedgeSessionPage({
+export default async function WedgeSessionSummaryPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -13,18 +13,16 @@ export default async function WedgeSessionPage({
 
   const loaded = await loadWedgeSession(id, user.id);
   if (!loaded) notFound();
-  // A finished session has nothing left to enter — show its summary.
-  if (loaded.session.status === "complete") {
-    redirect(`/wedgemaxx/${id}/summary`);
-  }
 
   return (
-    <WedgeSession
+    <WedgeSessionSummaryView
       sessionId={id}
+      startedAt={loaded.session.startedAt.toISOString()}
       ballCount={loaded.session.ballCount}
       minDistance={loaded.session.minDistance}
       maxDistance={loaded.session.maxDistance}
-      initialShots={loaded.shots}
+      elapsedSeconds={loaded.session.elapsedSeconds}
+      shots={loaded.shots}
     />
   );
 }

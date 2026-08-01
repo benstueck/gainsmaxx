@@ -11,7 +11,7 @@ import type { WedgeShot, WedgeShotResult, WedgeSessionSummary } from "./types";
  * in the naive "points = 100 + 50 × SG" formulation.
  */
 
-/** Score awarded for reference (scratch-level) distance control. */
+/** Score awarded for reference (PGA Tour average) distance control. */
 export const BASE_POINTS = 100;
 
 /**
@@ -60,8 +60,13 @@ const RAYLEIGH_MEAN = Math.sqrt(Math.PI / 2);
 /** Mean absolute per-axis miss of a Gaussian, in units of σ. */
 const HALF_NORMAL_MEAN = Math.sqrt(2 / Math.PI);
 
-/** Scratch distance-control dispersion as a multiple of tour's. */
-const SCRATCH_DISPERSION_MULTIPLIER = 1.5;
+/**
+ * Whose distance control scores exactly BASE_POINTS, as a multiple of tour
+ * dispersion. 1.0 = **PGA Tour average is the anchor**, so breaking 100 means
+ * out-controlling tour distance-wise — deliberately hard. (Originally 1.5,
+ * anchoring on scratch, which real sessions showed was far too generous.)
+ */
+const REFERENCE_DISPERSION_MULTIPLIER = 1;
 
 /** Expected strokes to hole out from `proxYd` yards from the pin. */
 function endExpectedStrokes(proxYd: number): number {
@@ -150,11 +155,12 @@ function expectedSgForSigma(target: number, sigma: number): number {
 }
 
 /**
- * The per-target reference: expected SG of a SCRATCH player here. Because the
- * points curve is convex, a player's session average sits ~7 points above
- * their score at their average error — so the anchor has to be an expectation
- * over the whole error distribution, not the score at the mean error. With
- * this, scratch averages exactly BASE_POINTS at every target by linearity.
+ * The per-target reference: expected SG of a TOUR-average player here.
+ * Because the points curve is convex, a player's session average sits ~7
+ * points above their score at their average error — so the anchor has to be
+ * an expectation over the whole error distribution, not the score at the mean
+ * error. With this, tour averages exactly BASE_POINTS at every target by
+ * linearity of expectation.
  *
  * Memoized per whole yard: the integration is far too slow to redo per shot.
  */
@@ -165,7 +171,7 @@ export function referenceSg(target: number): number {
   if (cached !== undefined) return cached;
   const value = expectedSgForSigma(
     key,
-    tourSigmaYd(key) * SCRATCH_DISPERSION_MULTIPLIER,
+    tourSigmaYd(key) * REFERENCE_DISPERSION_MULTIPLIER,
   );
   referenceCache.set(key, value);
   return value;
