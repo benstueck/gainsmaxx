@@ -29,4 +29,7 @@ export {
 
 export { formatDuration, formatClock } from "./format";
 
+export { wedgeCareerStats } from "./career-stats";
+export type { WedgeCareerStats } from "./career-stats";
+
 export type { WedgeShot, WedgeShotResult, WedgeSessionSummary } from "./types";

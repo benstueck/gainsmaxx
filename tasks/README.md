@@ -20,7 +20,7 @@ criteria**. Work top-down; keep checkboxes and the status line honest so any ses
 | 10  | [Offline-first & PWA](10-offline-pwa.md)                              | done        | Serwist (Turbopack) + Dexie sync — verified full offline round + finish              |
 | 11  | [QA & deploy](11-qa-deploy.md)                                        | in progress | Deployed live to gainsmaxx.benstueck.com; final on-phone offline re-test outstanding |
 | 12  | [Advanced stats (distance breakdown + FIR/GIR)](12-advanced-stats.md) | in progress | Implemented + unit tested; not yet verified in the browser                           |
-| 13  | [Wedgemaxx](13-wedgemaxx.md)                                          | in progress | Phases 1-7 done (entry loop, edit, timer, summary, offline). Profile stats remain    |
+| 13  | [Wedgemaxx](13-wedgemaxx.md)                                          | in progress | All 8 phases done + browser-verified; on-phone pass outstanding                      |
 
 ## Blocked-on-user
 

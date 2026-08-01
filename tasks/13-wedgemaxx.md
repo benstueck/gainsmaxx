@@ -1,9 +1,9 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** Phases 1–7 done and verified in the browser (Phase 5 interactions; Phase 7 offline
-cycle against a production build with the server stopped). Playable end to end: create → log balls
-→ mishits → edit → end early / finish → summary, offline-resilient throughout. Remaining: profile
-stats (8), and an on-phone pass.
+**Status:** All 8 phases done and verified in the browser (Phase 7's offline cycle against a
+production build with the server stopped). Create → log balls → mishits → edit → end early /
+finish → summary, offline-resilient throughout, with career stats on Profile.
+**Outstanding:** an on-phone pass, and the scoring-calibration question in "Open question" below.
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -166,7 +166,7 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       roll-one-at-a-time path, so nothing in flight broke.
 
       Verified: generated sequences are whole yards in range with no adjacent repeats, and the
-                                      `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
+                                              `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.
@@ -237,19 +237,51 @@ _controlling_ the tab, so the very first page loaded after registration is misse
 `/feed` showed as uncached until it was revisited — not a bug, but it's exactly why guessing which
 pages are cached (the old `skipGuard` approach) fails and asking the cache directly works.
 
-## Phase 8 — Profile
+## Phase 8 — Profile — **done**
 
-- [ ] Wedgemaxx block on `app/(app)/profile/page.tsx`: sessions completed, career average points,
-      best session
+- [x] `lib/wedge/career-stats.ts` — `wedgeCareerStats`: sessions completed, balls hit, career
+      average points, best session, career bias, mishit rate. **Weighted per ball**, matching how
+      `lib/career-stats.ts` weights rounds by holes played — a 40-ball session is four times the
+      evidence of a 10-ball one, and averaging session averages would let a short session swing
+      the career figure as hard as a long one. Bias carries its own struck-ball denominator so
+      mishits can't skew it. 7 tests.
+- [x] Wedgemaxx block on `app/(app)/profile/page.tsx`, and **the two modes are now explicitly
+      separated** rather than one unlabelled "Your game" section:
+  - **Gainsmaxx** — "Strokes gained from rounds you've tracked": avg SG/18, per-category, with
+    the Advanced Stats disclosure nested underneath so it reads as part of that mode
+  - **Wedgemaxx** — "Wedge distance control from your practice sessions": avg points (with
+    "100 = PGA Tour" spelled out inline, since the two scales mean completely different things),
+    sessions/balls, best session, bias, mishit rate
+  - **Profile** — account settings, unchanged
+
+**Verified in the browser** in both states: with no data (both sections show their own empty
+message) and with data seeded for the test account (Gainsmaxx +29.95 avg SG/18 with its category
+row and Advanced Stats dropdown; Wedgemaxx 79.2 avg points / best 79.2 / bias −2.5 yd / 33%
+mishits — matching that session's summary exactly). The seeded round was deleted afterwards.
 
 ## Acceptance criteria
 
-- [ ] A scratch-level distance-control simulation averages ~100 at 50, 90, and 140 yards.
-- [ ] Points are monotonic in error, never negative, and have no cliff at an exact carry.
-- [ ] A session survives going offline mid-way, and syncs on reconnect.
-- [ ] Editing an earlier shot recomputes the session average correctly.
-- [ ] Ending early scores only the balls actually hit.
-- [ ] Wedgemaxx data is per-user isolated (RLS verified, not just app-level scoping).
+- [x] A **tour-level** distance-control simulation averages 100 at 50, 90 and 140 yards (the
+      anchor moved from scratch to tour after real use — see the Phase 4 retune note). Asserted
+      with a seeded PRNG so it can't flake.
+- [x] Points are monotonic in error, never negative, and have no cliff at an exact carry.
+- [x] A session survives going offline mid-way, and syncs on reconnect — verified against a
+      production build with the server stopped, then confirmed in Postgres.
+- [x] Editing an earlier shot recomputes the session average correctly (97.9 → 93.6, persisted).
+- [x] Ending early scores only the balls actually hit (`sessionSummary` averages over `ballsHit`;
+      the End-session confirm states the count).
+- [x] Wedgemaxx data is per-user isolated — RLS enabled with per-user policies verified in the DB,
+      and observed in practice: sessions belonging to the `ben` account are absent from the
+      `claude` account's list.
+
+## Open question — is the anchor calibrated right?
+
+The user's real sessions averaged ~114.8 under the old scratch anchor, which becomes ~108 under
+tour. If genuine range sessions keep landing meaningfully above 100, the likely culprit is **not**
+the anchor but the isotropic-dispersion assumption in `plans/02-wedgemaxx.md`: deriving
+`σ_tour = P_tour / 1.253` may understate tour's true distance-only error, making the reference too
+easy to beat. That's a different constant to turn than `REFERENCE_DISPERSION_MULTIPLIER`, so
+diagnose before adjusting. Worth revisiting once there are several real sessions to look at.
 
 ## Notes
 
