@@ -246,7 +246,6 @@ export function WedgeSession({
           <GuardedLink
             href="/wedgemaxx"
             aria-label="Exit session"
-            skipGuard
             className="p-2 text-muted"
           >
             <X size={24} />

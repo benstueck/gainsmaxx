@@ -23,10 +23,6 @@ export function SessionCard({ session }: { session: FeedWedgeSession }) {
           ? `/wedgemaxx/${session.id}`
           : `/wedgemaxx/${session.id}/summary`
       }
-      // Resuming an in-progress session is always safe offline — it's the
-      // page it was being tracked on, so it's guaranteed cached. A finished
-      // session's summary might not be, so that one keeps the guard.
-      skipGuard={inProgress}
       className={cn(
         "block rounded-app border p-4 active:bg-surface",
         inProgress ? "border-primary bg-primary/5" : "border-border",

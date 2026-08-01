@@ -1,8 +1,9 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** Phases 1–7 code-complete — playable end to end (create → log balls → mishits → edit →
-end early / finish → summary) and offline-resilient. Remaining: profile stats (8), plus on-phone
-verification of Phases 5 and 7.
+**Status:** Phases 1–7 done and verified in the browser (Phase 5 interactions; Phase 7 offline
+cycle against a production build with the server stopped). Playable end to end: create → log balls
+→ mishits → edit → end early / finish → summary, offline-resilient throughout. Remaining: profile
+stats (8), and an on-phone pass.
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -88,7 +89,8 @@ carry, and a duplicate shot number.
 **Offline-guard behaviour preserved exactly:** every tab is still a `GuardedLink` with
 `skipGuard={active}`. The one deliberate asymmetry is that the Feed "+" is _not_ skipGuarded —
 starting a round needs connectivity. When on `/round/new` no tab matches, so all three guard
-normally, which is correct.
+normally, which is correct. _(Superseded in Phase 7: the guard became cache-aware and the other
+`skipGuard` overrides were removed — see that section.)_
 
 **Verified:** `/wedgemaxx` redirects to `/login` when signed out (route exists and is
 auth-protected, not a 404), no console errors, build registers the route.
@@ -164,7 +166,7 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       roll-one-at-a-time path, so nothing in flight broke.
 
       Verified: generated sequences are whole yards in range with no adjacent repeats, and the
-                      `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
+                                      `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.
@@ -204,17 +206,36 @@ verified against the real compiled CSS, but the timer, row-editing and ⋯ menu 
       **The redirect-success path clears the draft** — skipping that is exactly the bug that left
       stale drafts behind in Milestone 10.
 - [x] `RegisterServiceWorker` flushes both round and wedge drafts on load and on reconnect
+- [x] **Cache-aware offline guard** (closes the gap that was flagged here). `useOfflineGuard` no
+      longer blocks purely on `navigator.onLine` — while offline it asks
+      `caches.match(href)` whether the service worker can actually serve the destination, and
+      allows the navigation when it can, falling back to the modal when it can't. The navigation
+      is a full `window.location` assignment rather than a client-router push, because the router
+      would fetch an RSC payload that may not be cached even when the document is.
+- [x] **Removed every `skipGuard` except the tab-bar's `active` case.** They were workarounds for
+      the blunt online-only guard and had become actively harmful: `SessionCard`'s
+      `skipGuard={inProgress}` assumed "resuming is always safe offline", which is false when the
+      session page was never cached — verified by landing on the dead-end SW fallback. The
+      cache-aware guard subsumes all of them correctly. This also applies to the round flow.
 - [ ] Verify on a real phone: full offline session, offline End Session, force-quit + relaunch
       recovery — the exact scenarios that surfaced real bugs in Milestone 10/11
 
-**Known gap — reaching an in-progress session offline after a relaunch.** The PWA relaunches at
-`start_url` (`/feed`), and the Wedgemaxx tab is a `GuardedLink`, so while offline you can't
-navigate to `/wedgemaxx` to resume. Rounds don't have this problem because `/feed` _is_ the round
-list. The session itself survives signal loss perfectly while it stays open, which is the main
-range scenario; this only bites if the app is force-quit mid-session while offline. The real fix
-is probably a **cache-aware guard** (`caches.match()` the destination and allow the navigation
-when a cached copy exists) rather than relying on `navigator.onLine` alone — that would fix every
-navigation case, not just this one. Not attempted yet; flagged for a follow-up.
+**Verified end to end against a production build with the server actually stopped** (dev mode
+can't be used for this — `defaultCache` is `NetworkOnly` outside production, so nothing caches):
+
+| Case                                   | Result                                         |
+| -------------------------------------- | ---------------------------------------------- |
+| Tab → cached `/wedgemaxx`, offline     | Navigates, served from cache                   |
+| Tab → uncached `/profile`, offline     | Modal, stays put                               |
+| "Continue" → uncached session, offline | Modal (previously a dead end)                  |
+| "Continue" → cached session, offline   | Opens, shot list and edits intact              |
+| Log a ball with the server stopped     | "Saved locally", queued in Dexie with 13 shots |
+| Reconnect + `online` event             | Draft cleared, shot #13 confirmed in Postgres  |
+
+**Service-worker lifecycle gotcha worth remembering:** a page is only cached once the SW is
+_controlling_ the tab, so the very first page loaded after registration is missed. That's why
+`/feed` showed as uncached until it was revisited — not a bug, but it's exactly why guessing which
+pages are cached (the old `skipGuard` approach) fails and asking the cache directly works.
 
 ## Phase 8 — Profile
 

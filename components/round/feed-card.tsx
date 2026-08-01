@@ -51,11 +51,6 @@ export function FeedCard({ round }: { round: FeedRound }) {
   return (
     <GuardedLink
       href={href}
-      // Continuing the in-progress round is always safe offline — it's the
-      // exact page the round is already being tracked on, guaranteed
-      // cached. A past round's summary might not be, so that one still
-      // gets the offline check.
-      skipGuard={inProgress}
       className={cn(
         "block rounded-app border p-4 active:bg-surface",
         inProgress ? "border-primary bg-primary/5" : "border-border",

@@ -454,7 +454,6 @@ export function RoundSession({
           <GuardedLink
             href="/feed"
             aria-label="Exit round"
-            skipGuard
             className="p-2 text-muted"
           >
             <X size={24} />
