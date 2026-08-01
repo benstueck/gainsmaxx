@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { wedgeSessions, wedgeShots as wedgeShotsTable } from "@/lib/db/schema";
-import { validateSessionParams, type WedgeShot } from "@/lib/wedge";
+import { nextTarget, validateSessionParams, type WedgeShot } from "@/lib/wedge";
 
 /** Create a new in-progress session and enter it. */
 export async function createWedgeSession(
@@ -19,6 +19,16 @@ export async function createWedgeSession(
   const invalid = validateSessionParams(ballCount, minDistance, maxDistance);
   if (invalid) throw new Error(invalid);
 
+  // Roll the whole sequence up front so a reload or force-quit mid-session
+  // hands back the same yardage instead of re-rolling it, and so the offline
+  // layer has the targets without needing the server.
+  const targets: number[] = [];
+  let previous: number | null = null;
+  for (let i = 0; i < ballCount; i++) {
+    previous = nextTarget(minDistance, maxDistance, previous);
+    targets.push(previous);
+  }
+
   const db = getDb();
   const [row] = await db
     .insert(wedgeSessions)
@@ -28,6 +38,7 @@ export async function createWedgeSession(
       ballCount,
       minDistance,
       maxDistance,
+      targets,
       status: "in_progress",
     })
     .returning({ id: wedgeSessions.id });

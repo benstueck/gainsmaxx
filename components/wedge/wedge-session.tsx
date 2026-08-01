@@ -29,6 +29,7 @@ export function WedgeSession({
   maxDistance,
   initialShots,
   initialElapsedSeconds,
+  targets,
 }: {
   sessionId: string;
   ballCount: number;
@@ -36,6 +37,9 @@ export function WedgeSession({
   maxDistance: number;
   initialShots: WedgeShot[];
   initialElapsedSeconds: number;
+  /** Pre-rolled at session creation. Empty for sessions created before that
+   *  existed, which fall back to rolling one at a time. */
+  targets: number[];
 }) {
   const [shots, setShots] = useState<WedgeShot[]>(initialShots);
   const [carry, setCarry] = useState("");
@@ -48,10 +52,11 @@ export function WedgeSession({
   const [, startSave] = useTransition();
   const offlineGuard = useOfflineGuard();
 
-  // The pending target lives in client state and is only persisted once the
-  // ball is logged. A reload therefore re-rolls it — acceptable for a
-  // practice drill, and far simpler than reserving a target server-side.
-  const [target, setTarget] = useState(() =>
+  // Legacy fallback only: sessions created before targets were pre-rolled
+  // still generate one at a time, so a reload re-rolls the pending yardage.
+  // Sessions created now read straight from the stored sequence and are
+  // stable across reloads and relaunches.
+  const [fallbackTarget, setFallbackTarget] = useState(() =>
     nextTarget(
       minDistance,
       maxDistance,
@@ -83,6 +88,7 @@ export function WedgeSession({
     return () => clearInterval(id);
   }, []);
 
+  const target = targets[shots.length] ?? fallbackTarget;
   const summary = sessionSummary(shots);
   const allBallsHit = shots.length >= ballCount;
   const ballNumber = Math.min(shots.length + 1, ballCount);
@@ -100,7 +106,10 @@ export function WedgeSession({
     const updated = [...shots, { targetDistance: target, carryDistance }];
     setShots(updated);
     setCarry("");
-    setTarget(nextTarget(minDistance, maxDistance, target));
+    // Only advance the fallback when this session has no stored sequence.
+    if (targets[updated.length] == null) {
+      setFallbackTarget(nextTarget(minDistance, maxDistance, target));
+    }
     persist(updated);
   }
 

@@ -154,8 +154,16 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       keypad prefills its carry, and the dock offers Cancel / Mishit / Save. Points recompute.
 - [x] **⋯ menu**: **End session** (finish early, confirms and scores over the balls actually hit)
       and **Discard session** (confirms, offline-guarded — it's a real server delete)
-- [ ] Ability to change the pending target is deliberately absent; note that a **reload re-rolls
-      it**, since the pending target lives in client state and is only persisted once logged
+- [x] **Pending target is now stable across reloads.** The whole yardage sequence is rolled once
+      at session creation and stored on `wedge_sessions.targets` (migration `0005`, applied to
+      prod). Previously it lived only in client state, so a refresh — or the force-quit/relaunch
+      that offline testing depends on — handed back a different number, which was also mildly
+      exploitable. Stored as a list rather than derived from a seed so the yardages can't shift
+      if the RNG changes. Sessions created before the column fall back to the old
+      roll-one-at-a-time path, so nothing in flight broke.
+
+      Verified: generated sequences are whole yards in range with no adjacent repeats, and the
+          `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.

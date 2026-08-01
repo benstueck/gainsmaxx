@@ -189,6 +189,16 @@ export const wedgeSessions = pgTable(
     maxDistance: integer("max_distance").notNull(),
     // Active time only — the timer pauses when the user backs out.
     elapsedSeconds: integer("elapsed_seconds").notNull().default(0),
+    // The full sequence of target yardages, rolled once at creation. Storing
+    // them (rather than rolling per ball in the client) means a reload or a
+    // force-quit hands back the SAME yardage instead of re-rolling it, and
+    // the offline layer gets them for free. Stored rather than derived from a
+    // seed so the numbers can't shift if the RNG ever changes. Defaults empty
+    // so sessions created before this column fall back to rolling on the fly.
+    targets: integer("targets")
+      .array()
+      .notNull()
+      .default(sql`'{}'::integer[]`),
     status: roundStatusEnum("status").notNull().default("in_progress"),
     ...timestamps,
   },

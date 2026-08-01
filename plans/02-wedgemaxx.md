@@ -157,7 +157,11 @@ matching `FeedCard`'s visual treatment. A "+" starts a new session.
 - Elapsed **timer** (informational only; pauses when you back out).
 - **Ball X of N**.
 - A large **target yardage** — uniform random whole yards in `[min, max]`, never repeating the
-  immediately-preceding target.
+  immediately-preceding target. The whole sequence is **rolled once when the session is created**
+  and stored on the session row, so a reload or a force-quit hands back the _same_ yardage rather
+  than re-rolling it (which was both unsettling mid-swing and mildly exploitable), and the
+  offline layer gets the targets without needing the server. Stored as a list rather than derived
+  from a seed, so the numbers can't shift if the RNG implementation ever changes.
 - An **always-visible custom numeric keypad** (`NumericKeypad`, shared with round tracking) —
   explicitly **not** the OS keyboard. The native keyboard shifts the viewport and covers the
   target yardage you're aiming at, and stays open across balls so you can't see the next target.
@@ -179,7 +183,8 @@ mirroring Advanced Stats.
 Two new tables, same RLS + per-user isolation pattern as `rounds`/`holes`/`shots`:
 
 - `wedge_sessions` — `user_id`, `client_uuid`, `started_at`, `status` (in_progress|complete),
-  `ball_count`, `min_distance`, `max_distance`, `elapsed_seconds`, timestamps.
+  `ball_count`, `min_distance`, `max_distance`, `elapsed_seconds`, `targets` (**the pre-rolled
+  yardage sequence**), timestamps.
 - `wedge_shots` — `session_id`, `shot_number`, `target_distance`, `carry_distance` (**nullable —
   null means mishit**), timestamps.
 

@@ -1,0 +1,1 @@
+ALTER TABLE "wedge_sessions" ADD COLUMN "targets" integer[] DEFAULT '{}'::integer[] NOT NULL;
