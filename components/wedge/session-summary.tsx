@@ -7,8 +7,7 @@ import { GuardedLink } from "@/components/shell/guarded-link";
 import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
 import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
 import { deleteWedgeSession } from "@/app/wedgemaxx/actions";
-import { formatDuration } from "@/components/wedge/session-card";
-import { scoreShot, sessionSummary } from "@/lib/wedge";
+import { formatDuration, scoreShot, sessionSummary } from "@/lib/wedge";
 import type { WedgeShot } from "@/lib/wedge";
 
 function Stat({ label, value }: { label: string; value: string }) {

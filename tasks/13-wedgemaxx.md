@@ -1,7 +1,7 @@
 # 13 — Wedgemaxx (wedge distance-control training)
 
-**Status:** Phases 1–4 and 6 done — playable end to end (create → log balls → mishits → finish →
-summary). Remaining: timer, tap-to-edit, ⋯ menu (Phase 5), offline (7), profile (8).
+**Status:** Phases 1–6 done — playable end to end (create → log balls → mishits → edit → end
+early / finish → summary). Remaining: offline (7), profile (8).
 **Depends on:** 05 (SG engine), 10 (offline infra), 12 (advanced stats patterns)
 **Design:** [`../plans/02-wedgemaxx.md`](../plans/02-wedgemaxx.md) — read this first, especially
 the scoring derivation. Don't re-derive the calibration; it's documented there with the reasoning
@@ -146,10 +146,24 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
 - [x] Carry input **autofocused**; submit → score → next ball (done in Phase 4)
 - [x] **Mishit** button beside the input (done in Phase 4)
 - [x] Previous shots as rows, newest first (done in Phase 4)
-- [ ] Elapsed timer (pauses on leave) — currently `elapsedSeconds` is always persisted as 0
-- [ ] **Tap a row to edit** a mistyped carry
+- [x] **Elapsed timer** — counts active seconds only: advances by real wall-clock deltas (a
+      throttled background interval would otherwise under-count) and stops entirely while the tab
+      is hidden, so backgrounding the app at the range doesn't inflate the duration. Persisted
+      with every save/finish and shown on the summary + list card.
+- [x] **Tap a row to edit** a mistyped carry — the target display switches to that ball, the
+      keypad prefills its carry, and the dock offers Cancel / Mishit / Save. Points recompute.
+- [x] **⋯ menu**: **End session** (finish early, confirms and scores over the balls actually hit)
+      and **Discard session** (confirms, offline-guarded — it's a real server delete)
 - [ ] Ability to change the pending target is deliberately absent; note that a **reload re-rolls
       it**, since the pending target lives in client state and is only persisted once logged
+
+**Known limitation:** elapsed time is only persisted when a ball is logged or the session
+finishes. Exiting via the X without logging anything loses the seconds since the last save.
+
+**Not visually verified** — the browser session's auth cookie went stale partway through and I
+can't sign in myself. typecheck / lint / build / 82 tests are green, and the layout fix below was
+verified against the real compiled CSS, but the timer, row-editing and ⋯ menu need a click-through.
+
 - [ ] **⋯ menu**: **End session** (finish early, score over shots taken) and **Discard session**
       (delete, with `ConfirmDialog`) — reuse the round-session patterns, including the
       offline guard on Discard (it's a real server mutation)

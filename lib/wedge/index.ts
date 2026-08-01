@@ -27,4 +27,6 @@ export {
   validateSessionParams,
 } from "./session-params";
 
+export { formatDuration, formatClock } from "./format";
+
 export type { WedgeShot, WedgeShotResult, WedgeSessionSummary } from "./types";

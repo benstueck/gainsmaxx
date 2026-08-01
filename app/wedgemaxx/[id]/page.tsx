@@ -25,6 +25,7 @@ export default async function WedgeSessionPage({
       minDistance={loaded.session.minDistance}
       maxDistance={loaded.session.maxDistance}
       initialShots={loaded.shots}
+      initialElapsedSeconds={loaded.session.elapsedSeconds}
     />
   );
 }

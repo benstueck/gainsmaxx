@@ -1,14 +1,8 @@
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GuardedLink } from "@/components/shell/guarded-link";
+import { formatDuration } from "@/lib/wedge";
 import type { FeedWedgeSession } from "@/lib/db/wedge-queries";
-
-export function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const m = Math.floor(seconds / 60);
-  if (m < 60) return `${m}m`;
-  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
-}
 
 const fmtBias = (v: number) =>
   `${v >= 0 ? "+" : ""}${v.toFixed(1)} yd${v < 0 ? " short" : v > 0 ? " long" : ""}`;
