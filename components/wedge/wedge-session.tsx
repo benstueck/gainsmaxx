@@ -68,11 +68,13 @@ export function WedgeSession({
     }
   }
 
-  // min-h-dvh, not min-h-full: body's height is auto (it only sets
-  // min-height:100%), so a percentage min-height on a child can't resolve and
-  // the container collapses to content height.
+  // h-dvh (a DEFINITE height), not min-h-full or min-h-dvh. Flexbox only
+  // shrinks children when the container has a definite size — with a
+  // min-height the container just grows to fit a long shot list, dragging the
+  // keypad off the bottom of the screen. A fixed height gives the scroller
+  // something to be constrained against.
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex h-dvh flex-col">
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         {/* Exiting is safe offline: everything entered is already saved. */}
         <GuardedLink
@@ -116,7 +118,8 @@ export function WedgeSession({
             </div>
           </div>
 
-          {/* Shot list takes whatever space is left, newest first. */}
+          {/* Shot list takes whatever space is left, newest first, and
+              scrolls internally so the keypad below never moves. */}
           <div className="flex-1 overflow-y-auto border-t border-border px-4">
             <ul className="flex flex-col">
               {shots

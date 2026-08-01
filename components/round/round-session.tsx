@@ -441,7 +441,11 @@ export function RoundSession({
 
   return (
     <>
-      <div className="flex min-h-full flex-col">
+      {/* h-dvh (a DEFINITE height), not min-h-full. Flexbox only shrinks
+          children when the container has a definite size — with a min-height
+          the container just grows to fit a long shot list, dragging the entry
+          dock off the bottom of the screen. */}
+      <div className="flex h-dvh flex-col">
         {/* Header */}
         <header className="flex items-center justify-between border-b border-border px-4 py-3">
           {/* Exiting is always safe offline — everything is already saved
@@ -527,6 +531,7 @@ export function RoundSession({
         </div>
 
         {/* Shot list */}
+        {/* Scrolls internally so the entry dock below never moves. */}
         <div className="flex-1 overflow-y-auto px-4">
           {inputs.length === 0 && hole.length != null && (
             <p className="py-6 text-center text-sm text-muted">
