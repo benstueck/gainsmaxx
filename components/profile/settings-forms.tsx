@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
 import { BigButton } from "@/components/ui/big-button";
+import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
+import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
 import { baselineOptions } from "@/lib/baseline";
 import {
   updatePasswordAction,
@@ -49,10 +51,22 @@ export function ProfileSettingsForm({
     updateProfileAction,
     {},
   );
+  const offlineGuard = useOfflineGuard();
   const options = baselineOptions(handicap);
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form
+      action={action}
+      // Signal can drop while you're already on this page — navigation here
+      // is blocked offline, but that can't help once you're standing on it.
+      onSubmit={(e) => {
+        if (!navigator.onLine) {
+          e.preventDefault();
+          offlineGuard.guard(() => {});
+        }
+      }}
+      className="flex flex-col gap-4"
+    >
       <Field label="Handicap index">
         <Input
           name="handicap"
@@ -96,6 +110,10 @@ export function ProfileSettingsForm({
         {pending ? "Saving…" : "Save changes"}
       </BigButton>
       <FieldStatus state={state} />
+      <OfflineNoticeModal
+        open={offlineGuard.blocked}
+        onClose={offlineGuard.dismiss}
+      />
     </form>
   );
 }
@@ -105,8 +123,18 @@ export function PasswordForm() {
     updatePasswordAction,
     {},
   );
+  const offlineGuard = useOfflineGuard();
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (!navigator.onLine) {
+          e.preventDefault();
+          offlineGuard.guard(() => {});
+        }
+      }}
+      className="flex flex-col gap-4"
+    >
       <Field label="New password">
         <Input
           name="password"
@@ -131,6 +159,10 @@ export function PasswordForm() {
         {pending ? "Saving…" : "Update password"}
       </BigButton>
       <FieldStatus state={state} />
+      <OfflineNoticeModal
+        open={offlineGuard.blocked}
+        onClose={offlineGuard.dismiss}
+      />
     </form>
   );
 }

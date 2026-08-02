@@ -15,8 +15,14 @@
  * hard-navigates to those when offline.
  */
 
-/** The three tabs — the pages you'd reach for after relaunching offline. */
-const SHELL_ROUTES = ["/feed", "/wedgemaxx", "/profile"];
+import { isBlockedOffline } from "./routes";
+
+/**
+ * The pages you'd reach for after relaunching offline. Profile is absent on
+ * purpose — it's mutation-only and blocked offline (see routes.ts), so
+ * caching it would just be wasted work.
+ */
+const SHELL_ROUTES = ["/feed", "/wedgemaxx"];
 
 /** Unauthenticated routes: warming from here would cache a redirect. */
 const PUBLIC_ROUTES = new Set(["/", "/login", "/signup", "/nux"]);
@@ -28,7 +34,11 @@ export async function warmOfflineCache(currentPath: string): Promise<void> {
   // follow a redirect to /login and we'd cache that under /feed.
   if (PUBLIC_ROUTES.has(currentPath)) return;
 
-  const targets = new Set([...SHELL_ROUTES, currentPath]);
+  // Don't warm the current page if it's one we'd refuse to open offline
+  // anyway (e.g. sitting on /wedgemaxx/new when signal drops).
+  const targets = new Set(SHELL_ROUTES);
+  if (!isBlockedOffline(currentPath)) targets.add(currentPath);
+
   for (const url of targets) {
     try {
       // Deliberately NOT skipped when already cached. The list pages change

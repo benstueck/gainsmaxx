@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { isBlockedOffline } from "./routes";
 
 /**
  * Can the service worker actually serve this page offline?
@@ -42,7 +43,9 @@ export function useOfflineGuard() {
     e.preventDefault();
     const href = e.currentTarget.getAttribute("href");
     void (async () => {
-      if (href && (await hasCachedDocument(href))) {
+      // Mutation-only routes are blocked even when cached — rendering the
+      // form would just lead to a save that can't succeed.
+      if (href && !isBlockedOffline(href) && (await hasCachedDocument(href))) {
         // A full navigation, not the client router: the router would fetch an
         // RSC payload that won't match any cached entry offline, and Next
         // recovers from that failure with a hard reload straight into the

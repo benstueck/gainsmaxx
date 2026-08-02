@@ -166,7 +166,7 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       roll-one-at-a-time path, so nothing in flight broke.
 
       Verified: generated sequences are whole yards in range with no adjacent repeats, and the
-                                                                  `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
+                                                                          `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.
@@ -283,6 +283,25 @@ is the right trade — the list pages change every time you start, finish or dis
 Verified with the exact scenario: cached list at 2 sessions → create a third → cached list
 refreshes to 3 and contains the new id → server stopped, offline → **X** lands on a list that
 includes the new session → **Continue** reopens it.
+
+### Mutation-only routes are blocked offline outright
+
+Warming had an unintended consequence: a cached document made **/wedgemaxx/new** and **/profile**
+_reachable_ offline, so you could open the setup screen or the settings form and then fail on
+save. The user hit an error page saving a profile update.
+
+Being cached answers "can we render this", not "should we go here". `lib/offline/routes.ts` adds
+the second question: `/profile`, `/wedgemaxx/new` and `/round/new` exist purely to perform a
+server mutation, so the guard refuses them offline **regardless of cache state**, and the warmer
+no longer caches them (including skipping the current path if you're standing on one when signal
+drops).
+
+Navigation blocking can't help if signal drops while you're _already_ on Profile, so both settings
+forms also guard their submit and show the modal instead of navigating to an error page.
+
+Verified offline against a production build with the server stopped: tapping **+** on the
+Wedgemaxx list → modal, stays put; tapping the **Profile** tab → modal, stays put, no dead end;
+and **Save changes** while sitting on `/profile` → modal, stays on the page.
 
 ## Phase 8 — Profile — **done**
 
