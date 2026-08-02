@@ -166,7 +166,7 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       roll-one-at-a-time path, so nothing in flight broke.
 
       Verified: generated sequences are whole yards in range with no adjacent repeats, and the
-                                                                          `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
+                                                                                  `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.
@@ -355,3 +355,22 @@ diagnose before adjusting. Worth revisiting once there are several real sessions
   that made `lib/sg/` easy to trust and test.
 - Points are **always derived**, never stored, so retuning `POINTS_PER_STROKE` or the calibration
   re-scores history consistently.
+
+## Post-launch polish
+
+- Subheaders reworded to name the mode rather than describe it twice:
+  **Gainsmaxx → "Strokes gained tracking"**, **Wedgemaxx → "Practice wedge distance control"**,
+  applied on both the tab pages and the Profile blocks so they read identically everywhere.
+- **Replaced the bias explainer on session summaries with a per-distance table.** The old box
+  ("You're averaging X yd short — usually a club or yardage-chart issue") was a fixed sentence
+  that read the same on every summary, so it carried no information. In its place,
+  `lib/wedge/distance-breakdown.ts` bands balls by **target** distance (Under 75 / 75–100 /
+  100–125 / 125+) and reports avg points, bias and ball count per band — numbers that differ
+  session to session and actually locate where distance control breaks down.
+  - Banded by target, not carry: the question is "how do I score from 120", so a ball belongs to
+    the yardage it was asked for even if the carry was wild.
+  - Fixed bounds rather than derived from the session's own min/max, so a band means the same
+    thing across sessions and stays comparable over time.
+  - Empty bands are omitted; a mishit counts as a ball but is excluded from the band's bias,
+    consistent with the session-level stats. Hidden entirely when only one band has balls.
+  - 7 tests, including boundary placement and the mishit rules.

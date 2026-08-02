@@ -17,7 +17,7 @@ export default async function WedgemaxxPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Wedgemaxx</h1>
           <p className="mt-1 text-sm text-muted">
-            Wedge distance control, scored by strokes gained.
+            Practice wedge distance control
           </p>
         </div>
         {/* Starting a session creates a server row, so this stays guarded —

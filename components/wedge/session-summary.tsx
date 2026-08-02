@@ -7,7 +7,12 @@ import { GuardedLink } from "@/components/shell/guarded-link";
 import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
 import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
 import { deleteWedgeSession } from "@/app/wedgemaxx/actions";
-import { formatDuration, scoreShot, sessionSummary } from "@/lib/wedge";
+import {
+  distanceBreakdown,
+  formatDuration,
+  scoreShot,
+  sessionSummary,
+} from "@/lib/wedge";
 import type { WedgeShot } from "@/lib/wedge";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -41,19 +46,15 @@ export function WedgeSessionSummaryView({
   const offlineGuard = useOfflineGuard();
 
   const summary = sessionSummary(shots);
+  const bands = distanceBreakdown(shots);
   const date = new Date(startedAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
-  // Negative bias means short. Spelling out the direction beats a bare
-  // signed number — "3.2 yd short" is the actionable read.
+  // Negative means short, positive long.
   const bias = summary.averageBiasYd;
-  const biasLabel =
-    Math.abs(bias) < 0.05
-      ? "Dead on"
-      : `${Math.abs(bias).toFixed(1)} yd ${bias < 0 ? "short" : "long"}`;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-5 px-5 py-6">
@@ -91,8 +92,7 @@ export function WedgeSessionSummaryView({
             </p>
 
             <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-3">
-              {/* Signed and compact so the three stats stay on one line each;
-                  the sentence below spells out the direction in words. */}
+              {/* Signed and compact so the three stats stay on one line each. */}
               <Stat
                 label="BIAS"
                 value={`${bias >= 0 ? "+" : "−"}${Math.abs(bias).toFixed(1)} yd`}
@@ -117,14 +117,47 @@ export function WedgeSessionSummaryView({
             )}
           </section>
 
-          {/* Bias is the coachable number, so say what it means. */}
-          {summary.ballsStruck > 0 && Math.abs(bias) >= 1 && (
-            <p className="rounded-app bg-surface p-4 text-sm">
-              You&rsquo;re averaging{" "}
-              <span className="font-semibold">{biasLabel}</span> across your
-              struck balls — a consistent gap like this is usually a club or
-              yardage-chart issue rather than a swing one.
-            </p>
+          {/* Per-distance scoring. Replaced a fixed sentence about bias that
+              read identically on every summary and so told you nothing; these
+              numbers differ session to session and actually locate a problem. */}
+          {bands.length > 1 && (
+            <section className="rounded-app border border-border p-4">
+              <h2 className="text-sm font-semibold text-muted">By distance</h2>
+              <ul className="mt-2 flex flex-col">
+                <li className="flex items-center justify-between border-b border-border py-1 text-xs font-medium text-muted">
+                  <span className="flex-1">Target</span>
+                  <span className="w-14 text-right">Avg pts</span>
+                  <span className="w-16 text-right">Bias</span>
+                  <span className="w-12 text-right">Balls</span>
+                </li>
+                {bands.map((band) => (
+                  <li
+                    key={band.label}
+                    className="flex items-center justify-between border-b border-border py-2 text-sm last:border-0"
+                  >
+                    <span className="flex-1">{band.label}</span>
+                    <span
+                      className={cn(
+                        "w-14 text-right font-semibold tabular-nums",
+                        band.averagePoints >= 100
+                          ? "text-positive"
+                          : "text-foreground",
+                      )}
+                    >
+                      {band.averagePoints.toFixed(0)}
+                    </span>
+                    <span className="w-16 text-right tabular-nums text-muted">
+                      {band.biasYd == null
+                        ? "—"
+                        : `${band.biasYd >= 0 ? "+" : "−"}${Math.abs(band.biasYd).toFixed(1)}`}
+                    </span>
+                    <span className="w-12 text-right tabular-nums text-muted">
+                      {band.ballsHit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           <section>

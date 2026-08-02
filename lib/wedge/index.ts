@@ -32,4 +32,7 @@ export { formatDuration, formatClock } from "./format";
 export { wedgeCareerStats } from "./career-stats";
 export type { WedgeCareerStats } from "./career-stats";
 
+export { distanceBreakdown } from "./distance-breakdown";
+export type { DistanceBand } from "./distance-breakdown";
+
 export type { WedgeShot, WedgeShotResult, WedgeSessionSummary } from "./types";

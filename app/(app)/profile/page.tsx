@@ -53,9 +53,7 @@ export default async function ProfilePage() {
 
       {/* --- Gainsmaxx: on-course strokes gained ------------------------- */}
       <h2 className="mt-6 text-lg font-bold tracking-tight">Gainsmaxx</h2>
-      <p className="text-sm text-muted">
-        Strokes gained from rounds you&rsquo;ve tracked.
-      </p>
+      <p className="text-sm text-muted">Strokes gained tracking</p>
 
       <section className="mt-3 rounded-app border border-border p-4">
         {stats.roundsPlayed === 0 ? (
@@ -111,9 +109,7 @@ export default async function ProfilePage() {
 
       {/* --- Wedgemaxx: range distance control ---------------------------- */}
       <h2 className="mt-8 text-lg font-bold tracking-tight">Wedgemaxx</h2>
-      <p className="text-sm text-muted">
-        Wedge distance control from your practice sessions.
-      </p>
+      <p className="text-sm text-muted">Practice wedge distance control</p>
 
       <section className="mt-3 rounded-app border border-border p-4">
         {wedge.sessionsCompleted === 0 ? (

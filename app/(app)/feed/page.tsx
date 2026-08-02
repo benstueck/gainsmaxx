@@ -24,9 +24,7 @@ export default async function FeedPage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Gainsmaxx</h1>
-          <p className="mt-1 text-sm text-muted">
-            Your rounds, scored by strokes gained.
-          </p>
+          <p className="mt-1 text-sm text-muted">Strokes gained tracking</p>
         </div>
         {/* Starting a round creates a server row, so this stays guarded —
             unlike resuming one, which works offline. */}
