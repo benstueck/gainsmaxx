@@ -166,7 +166,7 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       roll-one-at-a-time path, so nothing in flight broke.
 
       Verified: generated sequences are whole yards in range with no adjacent repeats, and the
-                                                          `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
+                                                                  `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.
@@ -268,6 +268,21 @@ Re-verified against a production build with the server stopped: one load of `/fe
 three tab documents; tapping the Wedgemaxx tab offline loads the real page; Exit → list → Continue
 round-trips offline with the shot list intact; and the same holds for an in-progress **round**
 (the Phase 3 regression).
+
+### …and then the cached list went stale
+
+Next on-phone failure: exit a session offline and it **wasn't in the list**, stranding it. Cause
+was an optimisation in the warmer — it skipped any URL already cached. A cached list page is a
+_snapshot from whenever it was warmed_, so a session created after that point simply wasn't in it.
+Exiting offline served the stale copy, which had no link back into the session you were just in.
+
+Fixed by always re-fetching rather than skipping: `NetworkFirst` overwrites the entry, so the
+offline copy stays current. Costs a few small HTML requests per route change while online, which
+is the right trade — the list pages change every time you start, finish or discard something.
+
+Verified with the exact scenario: cached list at 2 sessions → create a third → cached list
+refreshes to 3 and contains the new id → server stopped, offline → **X** lands on a list that
+includes the new session → **Continue** reopens it.
 
 ## Phase 8 — Profile — **done**
 

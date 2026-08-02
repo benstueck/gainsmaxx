@@ -31,9 +31,13 @@ export async function warmOfflineCache(currentPath: string): Promise<void> {
   const targets = new Set([...SHELL_ROUTES, currentPath]);
   for (const url of targets) {
     try {
-      // Already have a document for it — nothing to do.
-      if (await caches.match(url, { ignoreSearch: true })) continue;
-      // A plain fetch (no RSC headers) is what gets cached under the bare URL.
+      // Deliberately NOT skipped when already cached. The list pages change
+      // every time you start, finish or discard something, and a cached copy
+      // is a snapshot from whenever it was warmed. Skipping meant that a
+      // session created after the last warm was missing from the cached list,
+      // so exiting it offline landed on a list that didn't contain it — with
+      // no way back into the session. NetworkFirst overwrites the entry, so
+      // re-fetching is what keeps the offline copy honest.
       await fetch(url, { credentials: "same-origin" });
     } catch {
       // Offline or transient — it'll be retried on the next load.
