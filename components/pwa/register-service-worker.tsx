@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { flushAllDrafts } from "@/lib/offline/round-sync";
 import { flushAllWedgeDrafts } from "@/lib/offline/wedge-sync";
+import { warmOfflineCache } from "@/lib/offline/warm-cache";
 
 /** Registers the service worker built from app/sw.ts (served via the
  *  app/serwist/[path] route) so the app becomes installable and its shell
@@ -11,6 +13,8 @@ import { flushAllWedgeDrafts } from "@/lib/offline/wedge-sync";
  *  a draft left behind when its own page never got reopened (e.g. the app
  *  relaunched straight into Feed instead of the in-progress round). */
 export function RegisterServiceWorker() {
+  const pathname = usePathname();
+
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
     // The SW is served from /serwist/sw.js, so it defaults to that path as
@@ -32,6 +36,18 @@ export function RegisterServiceWorker() {
     window.addEventListener("online", flush);
     return () => window.removeEventListener("online", flush);
   }, []);
+
+  // Warm the offline document cache for the app shell and the current page.
+  // Tapping a link only ever caches an RSC payload, which is unusable for an
+  // offline navigation — so without this, pages you've visited by tapping are
+  // still unreachable after going offline. Re-runs per route so session and
+  // round pages get warmed as you open them.
+  useEffect(() => {
+    const warm = () => void warmOfflineCache(pathname);
+    warm();
+    window.addEventListener("online", warm);
+    return () => window.removeEventListener("online", warm);
+  }, [pathname]);
 
   return null;
 }

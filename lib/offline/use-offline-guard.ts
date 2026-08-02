@@ -3,17 +3,21 @@
 import { useCallback, useState } from "react";
 
 /**
- * Is there a cached copy of this page the service worker could serve?
+ * Can the service worker actually serve this page offline?
  *
- * This is what makes an offline navigation safe to allow. Blocking purely on
- * `navigator.onLine` is too blunt — it stops you reaching pages that ARE
- * cached — while allowing everything is too loose, because landing on an
- * uncached page offline is a dead end with no navigation out of it.
+ * Deliberately a *strict* match (no `ignoreVary`), because it must answer the
+ * narrow question "is there a cached DOCUMENT for this URL", which is the only
+ * thing a full navigation can use.
+ *
+ * `ignoreVary` was tried and is wrong here: it also matches RSC entries, which
+ * are keyed by a request carrying `Next-Router-State-Tree` (covered by Next's
+ * `Vary`). Those effectively never match a later navigation, so treating one
+ * as "cached" sends the user to the offline dead-end page. Documents are
+ * warmed ahead of time instead — see warm-cache.ts.
  */
-async function hasCachedCopy(href: string): Promise<boolean> {
+async function hasCachedDocument(href: string): Promise<boolean> {
   if (typeof caches === "undefined") return false;
   try {
-    // ignoreSearch so /wedgemaxx?foo still matches the cached /wedgemaxx.
     const hit = await caches.match(href, { ignoreSearch: true });
     return hit != null;
   } catch {
@@ -24,26 +28,25 @@ async function hasCachedCopy(href: string): Promise<boolean> {
 /**
  * Guards navigations and server-backed actions while offline.
  *
- * Navigations are allowed through when the destination is already in the
- * service worker's cache, and blocked with an explanatory modal when it
- * isn't. Actions (deletes, finishes) are always blocked offline — a cache
- * can't help a mutation.
+ * Navigations proceed when a cached document exists and are blocked with an
+ * explanatory modal when one doesn't. Actions (deletes, finishes) are always
+ * blocked offline — a cache can't help a mutation.
  */
 export function useOfflineGuard() {
   const [blocked, setBlocked] = useState(false);
 
   const guardClick = useCallback((e: React.MouseEvent) => {
     if (navigator.onLine) return;
-    // Decide asynchronously, so cancel the default navigation either way and
-    // re-issue it ourselves if the page turns out to be cached.
+    // The decision is async, so cancel the default navigation either way and
+    // re-issue it ourselves once we know.
     e.preventDefault();
     const href = e.currentTarget.getAttribute("href");
     void (async () => {
-      if (href && (await hasCachedCopy(href))) {
-        // A full navigation rather than the client router: the router would
-        // fetch an RSC payload that may not be cached even when the document
-        // is, whereas the service worker can serve this straight from the
-        // pages cache.
+      if (href && (await hasCachedDocument(href))) {
+        // A full navigation, not the client router: the router would fetch an
+        // RSC payload that won't match any cached entry offline, and Next
+        // recovers from that failure with a hard reload straight into the
+        // dead-end page.
         window.location.href = href;
         return;
       }

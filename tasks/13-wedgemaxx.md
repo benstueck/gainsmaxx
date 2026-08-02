@@ -166,7 +166,7 @@ session average 86.0, finish redirecting to the list, and the card showing `bias
       roll-one-at-a-time path, so nothing in flight broke.
 
       Verified: generated sequences are whole yards in range with no adjacent repeats, and the
-                                              `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
+                                                          `integer[]` roundtrips through Drizzle identically (as numbers, not strings).
 
 **Known limitation:** elapsed time is only persisted when a ball is logged or the session
 finishes. Exiting via the X without logging anything loses the seconds since the last save.
@@ -236,6 +236,38 @@ can't be used for this — `defaultCache` is `NetworkOnly` outside production, s
 _controlling_ the tab, so the very first page loaded after registration is missed. That's why
 `/feed` showed as uncached until it was revisited — not a bug, but it's exactly why guessing which
 pages are cached (the old `skipGuard` approach) fails and asking the cache directly works.
+
+### The cache check was still wrong — RSC vs document (found on real hardware)
+
+On-phone testing failed three ways (exit → session list, resuming after relaunch, and resuming a
+round) — all one root cause, and my desktop verification had missed it because **I navigated with
+full page loads while a user taps links.** Those cache into completely different places:
+
+| How you got there | Cached as            | Cache       | Usable for offline nav? |
+| ----------------- | -------------------- | ----------- | ----------------------- |
+| Full page load    | `text/html` document | `others`    | **Yes**                 |
+| Tapping a link    | RSC payload          | `pages-rsc` | **No**                  |
+
+Two separate defects fell out of that:
+
+1. `caches.match(href)` returned false for pages that _were_ cached, because Next sets
+   `Vary: rsc, next-router-state-tree, …` and the cached RSC entry only matches a request carrying
+   those same headers. So the guard blocked navigations that should have worked.
+2. Even allowing it wouldn't have helped: `window.location` needs a **document**, and tapping
+   never caches one. `ignoreVary: true` + `router.push()` was tried and is also wrong — RSC
+   entries are keyed by `Next-Router-State-Tree`, which encodes the router state you navigated
+   _from_, so they essentially never match a later navigation. Next then "recovers" from the
+   failed RSC fetch with a hard reload straight into the dead-end page.
+
+**Fix:** keep the strict (document-only) cache check and the full navigation, and add
+`lib/offline/warm-cache.ts` — while online it fetches the documents for the three tabs plus
+whatever page you're on, skipping anything already cached. Wired into `RegisterServiceWorker`,
+re-running per route so session and round pages warm as you open them.
+
+Re-verified against a production build with the server stopped: one load of `/feed` warms all
+three tab documents; tapping the Wedgemaxx tab offline loads the real page; Exit → list → Continue
+round-trips offline with the shot list intact; and the same holds for an in-progress **round**
+(the Phase 3 regression).
 
 ## Phase 8 — Profile — **done**
 
