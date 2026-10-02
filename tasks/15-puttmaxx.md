@@ -170,9 +170,9 @@ _should_ we go there.
 - [x] `h-dvh` (a **definite** height — `min-h-*` does not resolve, as proven in Wedgemaxx), grid
       pinned, history scrolling independently
 - [x] The 3×3 grid, large touch targets; two independent misread toggles
-- [x] Miss follow-up: comeback distance (quick-tap buckets, not a keypad — coarse is fine since
-      hole SG doesn't depend on it) then the **same 3×3** for the comeback. Same three taps a
-      yes/no would have cost, roughly double the data.
+- [x] Miss follow-up: comeback distance on the **existing `NumericKeypad`** — the same control the
+      round and wedge sessions already use, with the same value-above-keys layout and Cancel/Next
+      row — then the **same 3×3** for the comeback itself.
 - [x] Pre-rolled `putts[index]` with a legacy fallback for sessions created before pre-rolling
 - [x] Elapsed timer counting active-only seconds (`visibilitychange`), tap-to-edit a previous putt,
       ⋯ menu with End session / Discard session
@@ -184,8 +184,11 @@ either way, so this was only caught by comparing against where the round and wed
 the symptom would have been a tab bar sitting over the grid. Noted in `app/(app)/layout.tsx` so the
 next mode doesn't repeat it.
 
-**All three steps share the same 3×3 footprint** — grid, comeback distance pad, grid — so the dock
-never changes height and nothing jumps under the thumb mid-session.
+**The dock matches the other two modes exactly**: same `NumericKeypad`, same value-above-keys
+layout, same `pb-3` bottom padding on the inner flex. A first pass invented a bespoke bucket pad
+for the comeback distance and omitted that padding, so the keys sat flush against the bottom edge
+and the mode looked unlike the rest of the app. Reusing what exists was both less code and more
+consistent — there was no argument for a second distance-entry control.
 
 **Verified in the browser, end to end:**
 

@@ -8,7 +8,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { GuardedLink } from "@/components/shell/guarded-link";
 import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
 import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
-import { PuttGrid, ComebackDistancePad, type GridChoice } from "./putt-grid";
+import { NumericKeypad } from "@/components/round/numeric-keypad";
+import { PuttGrid, type GridChoice } from "./putt-grid";
 import {
   deletePuttSession,
   finishPuttSession,
@@ -53,6 +54,7 @@ export function PuttSession({
   const [phase, setPhase] = useState<Phase>("first");
   const [draft, setDraft] = useState<GridChoice | null>(null);
   const [comebackFt, setComebackFt] = useState<number | null>(null);
+  const [comebackDraft, setComebackDraft] = useState("");
   const [misreadLine, setMisreadLine] = useState(false);
   const [misreadSpeed, setMisreadSpeed] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
@@ -115,6 +117,7 @@ export function PuttSession({
     setPhase("first");
     setDraft(null);
     setComebackFt(null);
+    setComebackDraft("");
     setMisreadLine(false);
     setMisreadSpeed(false);
     setEditing(null);
@@ -298,6 +301,7 @@ export function PuttSession({
                       setPhase("first");
                       setDraft(null);
                       setComebackFt(null);
+                      setComebackDraft("");
                       setMisreadLine(a.misreadLine);
                       setMisreadSpeed(a.misreadSpeed);
                     }}
@@ -333,32 +337,67 @@ export function PuttSession({
           </ul>
         </div>
 
-        {/* Dock. Same 3×3 footprint at every step, so nothing jumps. */}
+        {/* Dock. Matches the round and wedge sessions: same keypad, same
+            value-above-keys layout, same bottom padding. */}
         <div className="shrink-0 border-t border-border bg-background px-4 pb-safe pt-3">
           {done && editing == null ? (
-            <BigButton block disabled={finishing} onClick={onFinish}>
-              {finishing ? "Finishing…" : "Finish session"}
-            </BigButton>
-          ) : phase === "first" ? (
-            <PuttGrid onChoose={onFirstPutt} />
+            <div className="pb-3">
+              <BigButton block disabled={finishing} onClick={onFinish}>
+                {finishing ? "Finishing…" : "Finish session"}
+              </BigButton>
+            </div>
           ) : phase === "comebackDistance" ? (
-            <ComebackDistancePad
-              onChoose={(ft) => {
-                setComebackFt(ft);
-                setPhase("comebackResult");
-              }}
-            />
+            <div className="flex flex-col gap-3 pb-3">
+              <div className="flex items-baseline justify-center gap-2">
+                <span
+                  className={cn(
+                    "text-4xl font-bold tabular-nums",
+                    comebackDraft ? "text-foreground" : "text-muted/40",
+                  )}
+                >
+                  {comebackDraft || "—"}
+                </span>
+                <span className="text-sm font-semibold text-muted">
+                  feet back
+                </span>
+              </div>
+
+              <NumericKeypad
+                onDigit={(d) =>
+                  setComebackDraft((cur) =>
+                    cur.length >= 2 ? cur : cur === "0" ? d : cur + d,
+                  )
+                }
+                onBackspace={() => setComebackDraft((cur) => cur.slice(0, -1))}
+              />
+
+              <div className="flex gap-2">
+                <BigButton variant="secondary" onClick={resetEntry}>
+                  Cancel
+                </BigButton>
+                <BigButton
+                  block
+                  disabled={!comebackDraft || Number(comebackDraft) <= 0}
+                  onClick={() => {
+                    setComebackFt(Number(comebackDraft));
+                    setPhase("comebackResult");
+                  }}
+                >
+                  Next
+                </BigButton>
+              </div>
+            </div>
           ) : (
-            <PuttGrid onChoose={onComebackResult} />
-          )}
-          {(phase !== "first" || editing != null) && (
-            <button
-              type="button"
-              onClick={resetEntry}
-              className="mt-2 min-h-tap w-full text-sm font-semibold text-muted"
-            >
-              Cancel
-            </button>
+            <div className="flex flex-col gap-3 pb-3">
+              <PuttGrid
+                onChoose={phase === "first" ? onFirstPutt : onComebackResult}
+              />
+              {(phase !== "first" || editing != null) && (
+                <BigButton variant="secondary" block onClick={resetEntry}>
+                  Cancel
+                </BigButton>
+              )}
+            </div>
           )}
         </div>
       </div>

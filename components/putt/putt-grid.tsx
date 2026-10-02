@@ -78,36 +78,3 @@ export function PuttGrid({
     </div>
   );
 }
-
-/**
- * Where the missed putt finished, as quick-tap buckets.
- *
- * Coarse on purpose. The hole's strokes gained doesn't depend on this at all —
- * only the first putt's own score does — so precision buys little, while a
- * keypad costs real time when you're standing on a green holding a putter.
- * Laid out 3×3 so the dock keeps the same footprint across every step and the
- * screen never jumps.
- */
-export const COMEBACK_DISTANCES = [1, 2, 3, 4, 5, 6, 8, 10, 12];
-
-export function ComebackDistancePad({
-  onChoose,
-}: {
-  onChoose: (ft: number) => void;
-}) {
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {COMEBACK_DISTANCES.map((ft) => (
-        <button
-          key={ft}
-          type="button"
-          onClick={() => onChoose(ft)}
-          className="flex min-h-[4.5rem] flex-col items-center justify-center rounded-app border border-border bg-surface text-xl font-bold tabular-nums active:scale-95"
-        >
-          {ft}
-          <span className="text-xs font-normal text-muted">ft</span>
-        </button>
-      ))}
-    </div>
-  );
-}
