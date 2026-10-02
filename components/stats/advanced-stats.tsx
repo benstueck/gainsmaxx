@@ -54,7 +54,7 @@ export function AdvancedStatsSection({
         <div className="mt-3 border-t border-border pt-3">
           <p className="text-xs text-muted">
             Strokes gained vs the{" "}
-            <span className="font-semibold">PGA Tour</span> baseline — this
+            <span className="font-semibold">PGA Tour</span> baseline. This
             doesn&rsquo;t follow the baseline toggle above.
           </p>
           <div className="mt-3 flex flex-col gap-4">

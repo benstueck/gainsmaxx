@@ -399,3 +399,16 @@ The first attempt at fix 1 **silently did nothing** — Prettier had reformatted
 string replacement missed, and the script printed its success message regardless. It was caught
 only by grepping afterwards. Replacements in this repo should assert their target matched before
 claiming to have applied.
+
+### 4. Modals centred, and em dashes out of the copy
+
+All three modal shells (`ConfirmDialog`, `OfflineNoticeModal`, and the round summary's handicap
+editor) were bottom-sheet style on phones, centring only at `sm` and up. They now centre at every
+width, with a shadow and a side gutter.
+
+Em dashes removed from every sentence of UI copy across all three modes, 18 sites. The dash is
+**kept** as the empty-value placeholder (`"—"` where there's no number to show), which is a
+typographic convention rather than prose punctuation. Say so if that should go too.
+
+En dashes in numeric ranges (`5–12 ft`) are a different character and were left alone, since
+that's the correct dash for a range.

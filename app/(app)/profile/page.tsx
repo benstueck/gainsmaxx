@@ -225,7 +225,7 @@ export default async function ProfilePage() {
                       <span className="font-semibold">
                         {putt.readBias.leaning === "low" ? "low" : "high"}
                       </span>{" "}
-                      — {putt.readBias.leaning === "low" ? "under" : "over"}
+                      , {putt.readBias.leaning === "low" ? "under" : "over"}
                       -reading the break ({putt.readBias.n} putts)
                     </li>
                   )}
@@ -235,7 +235,7 @@ export default async function ProfilePage() {
                       <span className="font-semibold">
                         {putt.directionBias.leaning}
                       </span>{" "}
-                      — face or path ({putt.directionBias.n} putts)
+                      , face or path ({putt.directionBias.n} putts)
                     </li>
                   )}
                   {putt.speedBias.significant && (
@@ -244,7 +244,7 @@ export default async function ProfilePage() {
                       <span className="font-semibold">
                         {putt.speedBias.leaning}
                       </span>{" "}
-                      — pace control ({putt.speedBias.n} putts)
+                      , pace control ({putt.speedBias.n} putts)
                     </li>
                   )}
                 </ul>

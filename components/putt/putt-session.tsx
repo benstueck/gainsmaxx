@@ -539,7 +539,7 @@ export function PuttSession({
       <OfflineNoticeModal
         open={queuedFinish}
         onClose={() => setQueuedFinish(false)}
-        title="Saved — finishing when you&rsquo;re back online"
+        title="Saved, finishing when you&rsquo;re back online"
         description="Every putt is stored on this phone. The session will finish and its summary will open as soon as you have a connection, even if you close the app."
         closeLabel="Got it"
       />

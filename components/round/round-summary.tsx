@@ -361,11 +361,11 @@ export function RoundSummary({
           role="dialog"
           aria-modal="true"
           aria-labelledby="handicap-dialog-title"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 sm:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
           onClick={() => setEditingHandicap(false)}
         >
           <div
-            className="w-full max-w-sm rounded-t-app bg-background p-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:rounded-app sm:pb-5"
+            className="w-full max-w-sm rounded-app bg-background p-5 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="handicap-dialog-title" className="text-lg font-bold">
@@ -373,7 +373,7 @@ export function RoundSummary({
             </h2>
             <p className="mt-1.5 text-sm text-muted">
               The index you played off. Changes this round&rsquo;s strokes
-              gained only — it won&rsquo;t touch your current index or any other
+              gained only. It won&rsquo;t touch your current index or any other
               round.
             </p>
             <Input

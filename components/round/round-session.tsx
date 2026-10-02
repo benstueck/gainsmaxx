@@ -466,7 +466,7 @@ export function RoundSession({
               <div className="text-xs text-muted">
                 {syncStatus === "offline" ? (
                   <span className="inline-flex items-center gap-1 font-semibold text-negative">
-                    <WifiOff size={12} /> Offline — saved locally
+                    <WifiOff size={12} /> Offline, saved locally
                   </span>
                 ) : syncStatus === "saving" ? (
                   "Saving…"
@@ -523,7 +523,7 @@ export function RoundSession({
         <div className="flex-1 overflow-y-auto px-4">
           {inputs.length === 0 && hole.length != null && (
             <p className="py-6 text-center text-sm text-muted">
-              Tee shot from {hole.length} yd — where did it end up?
+              Tee shot from {hole.length} yd. Where did it end up?
             </p>
           )}
           <ul className="flex flex-col gap-2 py-2">
@@ -610,11 +610,11 @@ export function RoundSession({
           ) : complete && state.draft.editing == null ? (
             <div className="flex flex-col gap-3 pb-3">
               <p className="text-center font-semibold">
-                Hole complete — {holeSg.score} strokes, SG {fmtSg(holeSg.total)}
+                Hole complete: {holeSg.score} strokes, SG {fmtSg(holeSg.total)}
               </p>
               {isLastHole && offlineFinishQueued && (
                 <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-negative">
-                  <WifiOff size={14} /> Offline — will finish syncing once
+                  <WifiOff size={14} /> Offline. Will finish syncing once
                   you&rsquo;re back online.
                 </p>
               )}
@@ -773,7 +773,7 @@ function LengthEntry({
   return (
     <div className="flex flex-col gap-3 pb-3">
       <p className="text-center text-sm text-muted">
-        Tee shot — how long is the hole?
+        Tee shot. How long is the hole?
       </p>
       <div className="text-center text-4xl font-bold tabular-nums">
         {value || "0"}

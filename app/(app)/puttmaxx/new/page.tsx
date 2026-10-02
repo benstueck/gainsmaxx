@@ -15,7 +15,7 @@ export default async function NewPuttSessionPage() {
     <main className="mx-auto w-full max-w-md px-5 py-8">
       <h1 className="text-2xl font-bold tracking-tight">Start a session</h1>
       <p className="mt-1 text-muted">
-        Scored in strokes gained — 0.00 is Tour average.
+        Scored in strokes gained. 0.00 is Tour average.
       </p>
       <div className="mt-6">
         <NewSessionForm

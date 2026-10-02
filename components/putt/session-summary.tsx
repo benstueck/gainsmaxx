@@ -133,7 +133,7 @@ export function PuttSessionSummaryView({
             <h2 className="text-sm font-semibold text-muted">Tendencies</h2>
             <BiasGauge
               title="Direction"
-              detects="stroke — face & path"
+              detects="stroke: face & path"
               population="all putts, including comebacks"
               bias={s.directionBias}
               labels={["Left", "Right"] as const}

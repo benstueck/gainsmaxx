@@ -382,7 +382,7 @@ export function WedgeSession({
             <div className="flex flex-col gap-2 pb-3">
               {syncStatus === "offline" && (
                 <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-negative">
-                  <WifiOff size={14} /> Offline — will finish syncing once
+                  <WifiOff size={14} /> Offline. Will finish syncing once
                   you&rsquo;re back online.
                 </p>
               )}

@@ -75,7 +75,7 @@ export function NewSessionForm({
 
       <p className="text-sm text-muted">
         Each ball gets a random target in this range. Enter the carry distance
-        you actually hit — 100 points is scratch-level distance control.
+        you actually hit. 100 points is scratch-level distance control.
       </p>
 
       {error && <p className="text-sm font-medium text-negative">{error}</p>}

@@ -34,11 +34,11 @@ export function ConfirmDialog({
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 sm:items-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-sm rounded-t-app bg-background p-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:rounded-app sm:pb-5"
+        className="w-full max-w-sm rounded-app bg-background p-5 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-dialog-title" className="text-lg font-bold">

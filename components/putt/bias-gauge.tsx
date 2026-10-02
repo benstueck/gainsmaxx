@@ -61,12 +61,12 @@ export function BiasGauge<T extends string>({
           <span className="text-muted">No misses to read yet.</span>
         ) : bias.leaning == null ? (
           <span className="text-muted">
-            Even at {bias.n} — no lean either way.
+            Even at {bias.n}, no lean either way.
           </span>
         ) : bias.significant ? (
           <span className="font-semibold text-foreground">
             {Math.max(a, b)} of {bias.n}{" "}
-            {bias.leaning === bias.sides[0] ? labels[0] : labels[1]} — clear
+            {bias.leaning === bias.sides[0] ? labels[0] : labels[1]}. Clear
             enough to act on.
           </span>
         ) : (
@@ -78,7 +78,7 @@ export function BiasGauge<T extends string>({
               {bias.leaning === bias.sides[0] ? labels[0] : labels[1]}.
             </span>{" "}
             <span className="text-muted">
-              Not a tendency yet — keep logging.
+              Not a tendency yet. Keep logging.
             </span>
           </>
         )}{" "}
