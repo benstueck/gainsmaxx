@@ -1,6 +1,6 @@
 # 15 — Puttmaxx (practice-green putting training)
 
-**Status:** Phases 1–7 done. Only Phase 8 (Profile stats) and the on-phone pass remain.
+**Status:** All 8 phases done. Outstanding: the on-phone pass, and deploy (unpushed).
 **Depends on:** 05 (SG engine), 10 (offline infra), 13 (Wedgemaxx patterns to copy)
 **Design:** [`../plans/03-puttmaxx.md`](../plans/03-puttmaxx.md) — read first.
 
@@ -295,20 +295,55 @@ follow-up, but diverging in one mode would be worse than the status quo.
 
 ## Phase 8 — Profile
 
-- [ ] Puttmaxx block: sessions, career SG per putt, make %, best session — **weighted per putt**,
+- [x] Puttmaxx block: sessions, career SG per putt, make %, best session — **weighted per putt**,
       the same reasoning as `wedgeCareerStats` weighting per ball
+
+**Beyond the stated plan: career tendencies.** The plan listed sessions, SG per putt, make % and
+best session. I added pooled bias gauges, because a limitation flagged repeatedly through Phases
+2–6 lands exactly here: an 18-putt session yields ~10 misses, and at that size only a near-total
+split clears the significance gate — so within one session the gauges mostly read "not enough data
+yet". Correct, but close to useless. Pooled across sessions a real tendency accumulates and a
+fluke doesn't, which is both the honest way to read a bias and the only way most players will ever
+see one called at all.
+
+Only _called_ tendencies are listed. Silence means "nothing proven yet", which is the honest state
+most of the time and shouldn't be dressed up.
+
+**Verified on three seeded sessions by a simulated under-reader:**
+
+```
+−0.26 SG per putt · 3 sessions · 54 putts · 0.00 = Tour
+MADE 33%   3-PUTTS 11%   BEST −0.12
+
+CAREER TENDENCIES
+  Misses low — under-reading the break (24 putts)
+  Tends slow — pace control (9 putts)
+```
+
+The **direction** gauge is absent, and that absence is the point: across balanced breaks an
+under-read cancels in absolute left/right terms, so it is correctly not called even with 48 misses
+pooled. A single undifferentiated direction gauge would have reported this player as having no
+tendency whatsoever. One session couldn't call the read bias (4 low); 24 putts across three
+sessions can.
+
+**Best session is ranked by SG per putt, not total** — otherwise a long mediocre session beats a
+short excellent one, and the wrong thing gets celebrated. A test pins that.
 
 ## Acceptance criteria
 
-- [ ] A made putt from 8 ft scores **+0.50** SG; a 2-putt **−0.50**; a 3-putt **−1.50**.
-- [ ] Session SG of 0.00 corresponds to Tour-average putting over those distances.
-- [ ] First-putt SG distinguishes a miss leaving a tap-in from one running 6 ft past.
-- [ ] A 6–4 left/right split is **not** reported as a bias.
-- [ ] A consistent under-read shows on the **read** gauge and leaves the **direction** gauge
+- [x] A made putt from 8 ft scores **+0.50** SG; a 2-putt **−0.50**; a 3-putt **−1.50**.
+- [x] Session SG of 0.00 corresponds to Tour-average putting over those distances.
+- [x] First-putt SG distinguishes a miss leaving a tap-in from one running 6 ft past.
+- [x] A 6–4 left/right split is **not** reported as a bias.
+- [x] A consistent under-read shows on the **read** gauge and leaves the **direction** gauge
       neutral — the two faults don't contaminate each other.
-- [ ] A generated session has balanced break directions, so a read fault can't masquerade as a
+- [x] A generated session has balanced break directions, so a read fault can't masquerade as a
       stroke bias.
-- [ ] Comeback putts contribute to bias detection; make % and the miss map remain first-putt-only,
+- [x] Comeback putts contribute to bias detection; make % and the miss map remain first-putt-only,
       and the UI says which population each number uses.
-- [ ] A session survives going offline mid-way and syncs on reconnect.
-- [ ] Puttmaxx data is per-user isolated (RLS verified in the DB, not just app-level scoping).
+- [x] A session survives going offline mid-way and syncs on reconnect.
+- [~] Puttmaxx data is per-user isolated. **Partly verified:** RLS is enabled on both tables and
+  both per-user policies are active, confirmed by querying `pg_class` / `pg_policies` directly,
+  and every query scopes by `user_id` in its `where`. **Not** verified behaviourally with two
+  signed-in accounts the way Wedgemaxx was — the admin connection used for checks bypasses RLS,
+  so that test needs two real browser sessions. Worth doing in the on-phone pass.

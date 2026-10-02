@@ -17,6 +17,8 @@ export { rollSession } from "./generator";
 export { parsePutts } from "./parse";
 
 export { summarizeSession } from "./analytics";
+export { puttCareerStats } from "./career-stats";
+export type { PuttCareerStats } from "./career-stats";
 export type {
   MissCell,
   PuttDistanceBand,

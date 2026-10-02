@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { getProfile } from "@/lib/db/queries";
 import { loadUserRounds } from "@/lib/db/round-queries";
 import { loadUserWedgeSessions } from "@/lib/db/wedge-queries";
+import { loadUserPuttSessions } from "@/lib/db/putt-queries";
 import { resolveBaseline } from "@/lib/baseline";
 import { computeCareerStats } from "@/lib/career-stats";
 import { careerBucketTotals } from "@/lib/round-stats";
@@ -13,6 +14,7 @@ import {
   ProfileSettingsForm,
 } from "@/components/profile/settings-forms";
 import { wedgeCareerStats } from "@/lib/wedge";
+import { puttCareerStats } from "@/lib/putt";
 import type { SgCategory } from "@/lib/sg";
 
 const CATEGORY_LABEL: Record<SgCategory, string> = {
@@ -35,6 +37,8 @@ export default async function ProfilePage() {
   const rounds = await loadUserRounds(user.id, baseline);
   const wedgeSessions = await loadUserWedgeSessions(user.id);
   const wedge = wedgeCareerStats(wedgeSessions);
+  const puttSessions = await loadUserPuttSessions(user.id);
+  const putt = puttCareerStats(puttSessions);
   const stats = computeCareerStats(rounds);
   const bucketTotals = careerBucketTotals(
     rounds.map((r) => ({
@@ -151,6 +155,101 @@ export default async function ProfilePage() {
                 </div>
               </div>
             </div>
+          </>
+        )}
+      </section>
+
+      {/* --- Puttmaxx: practice-green putting ----------------------------- */}
+      <h2 className="mt-8 text-lg font-bold tracking-tight">Puttmaxx</h2>
+      <p className="text-sm text-muted">Practice green putting</p>
+
+      <section className="mt-3 rounded-app border border-border p-4">
+        {putt.sessionsCompleted === 0 ? (
+          <p className="text-sm text-muted">
+            Finish a session to see your putting numbers.
+          </p>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2">
+              <span
+                className={`text-4xl font-bold tabular-nums ${
+                  putt.averageSg >= 0 ? "text-positive" : "text-negative"
+                }`}
+              >
+                {fmtSg(putt.averageSg)}
+              </span>
+              <span className="text-sm text-muted">SG per putt</span>
+            </div>
+            <p className="mt-1 text-sm text-muted">
+              {putt.sessionsCompleted} session
+              {putt.sessionsCompleted === 1 ? "" : "s"} · {putt.puttsHit} putts
+              · 0.00 = Tour
+            </p>
+            <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3">
+              <div className="text-center">
+                <div className="text-xs font-semibold text-muted">MADE</div>
+                <div className="text-sm font-bold tabular-nums">
+                  {Math.round(putt.makePercent * 100)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs font-semibold text-muted">3-PUTTS</div>
+                <div className="text-sm font-bold tabular-nums">
+                  {Math.round(putt.threePuttRate * 100)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs font-semibold text-muted">BEST</div>
+                <div className="text-sm font-bold tabular-nums">
+                  {putt.bestSessionSg == null ? "—" : fmtSg(putt.bestSessionSg)}
+                </div>
+              </div>
+            </div>
+
+            {/* Career tendencies. A single session rarely has enough misses to
+                clear the significance gate; pooled across sessions is where a
+                real pattern shows and a fluke doesn't. Only called ones are
+                listed — silence here means "nothing proven yet", which is the
+                honest state most of the time. */}
+            {(putt.directionBias.significant ||
+              putt.readBias.significant ||
+              putt.speedBias.significant) && (
+              <div className="mt-4 border-t border-border pt-3">
+                <div className="text-xs font-semibold text-muted">
+                  CAREER TENDENCIES
+                </div>
+                <ul className="mt-1 flex flex-col gap-0.5 text-sm">
+                  {putt.readBias.significant && (
+                    <li>
+                      Misses{" "}
+                      <span className="font-semibold">
+                        {putt.readBias.leaning === "low" ? "low" : "high"}
+                      </span>{" "}
+                      — {putt.readBias.leaning === "low" ? "under" : "over"}
+                      -reading the break ({putt.readBias.n} putts)
+                    </li>
+                  )}
+                  {putt.directionBias.significant && (
+                    <li>
+                      Misses{" "}
+                      <span className="font-semibold">
+                        {putt.directionBias.leaning}
+                      </span>{" "}
+                      — face or path ({putt.directionBias.n} putts)
+                    </li>
+                  )}
+                  {putt.speedBias.significant && (
+                    <li>
+                      Tends{" "}
+                      <span className="font-semibold">
+                        {putt.speedBias.leaning}
+                      </span>{" "}
+                      — pace control ({putt.speedBias.n} putts)
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
           </>
         )}
       </section>
