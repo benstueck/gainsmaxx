@@ -77,11 +77,41 @@ _permits_ widening scope, doesn't do it automatically). `lib/offline/` (Dexie `r
   full verification writeup and a real bug caught during testing (`attemptFinish` wasn't clearing
   the local draft on the redirect-success path).
 
-**Milestone 11 in progress:** QA pass done (fresh-account e2e, RLS/isolation via a second real
-account, mobile viewport). Found and fixed a real bug: editing an earlier shot after its hole was
-already holed out silently failed (`lib/round.ts`'s new `startForIndex` fixes it — see
-`tasks/11-qa-deploy.md`). Deploy to Vercel not started; needs a decision on whether to reuse the
-existing (live, real-user) Supabase project as production or provision a separate one.
+**Milestone 11 done (deployed):** QA pass (fresh-account e2e, RLS/isolation via a second real
+account, mobile viewport) found and fixed a real bug — editing an earlier shot after its hole was
+already holed out silently failed (`lib/round.ts`'s `startForIndex`). **Live at
+https://gainsmaxx.benstueck.com** on Vercel, reusing the existing Supabase project as production.
+Outstanding: a final on-phone offline re-test.
+
+**The app was renamed Gainsmaxxing → Gainsmaxx** (repo, Vercel project, domain, local directory).
+One deliberate exception: the Dexie database is still named `"gainsmaxxing"`, so that installs
+carrying queued offline drafts upgrade rather than orphaning them. Don't "fix" that.
+
+**Milestone 12 done:** advanced stats — per-category SG by distance bucket (`lib/round-stats.ts`,
+`components/stats/advanced-stats.tsx`) on the round summary and Profile, plus FIR/GIR. Unit
+tested; **not yet verified in a browser**.
+
+**Milestone 13 done — Wedgemaxx** (`lib/wedge/`, `components/wedge/`, `app/(app)/wedgemaxx/`): a
+wedge distance-control training mode. The app calls a random yardage, you enter actual carry, and
+it's scored in points derived from strokes gained (**100 = PGA Tour average** at every distance;
+see `plans/02-wedgemaxx.md` — don't re-derive the calibration). Offline-first on the same Dexie
+pattern, with career stats on Profile. Outstanding: an on-phone pass.
+
+**Offline navigation was rewritten (read this before touching `lib/offline/`).** The old
+`/~offline` fallback page is gone — every navigation goes through `GuardedLink` +
+`useOfflineGuard`, which shows a modal instead of a dead end. Three non-obvious constraints, each
+learned from a real on-phone bug:
+
+1. **Tapping a link caches only an RSC payload, which is useless offline.** Those entries are
+   keyed by a request carrying `Next-Router-State-Tree` (covered by Next's `Vary`), so they
+   essentially never match a later navigation. Only _documents_ (from full page loads) are
+   usable. Hence `lib/offline/warm-cache.ts`, which pre-fetches documents for the tabs plus the
+   current page while online. The guard then does a **strict** `caches.match` (never
+   `ignoreVary`) and a **full navigation** (never `router.push`).
+2. **Warming must never skip already-cached URLs.** A cached list page is a snapshot; skipping
+   meant a session created later was missing from it, stranding you on exit.
+3. **Cached ≠ should-be-reachable.** `/profile`, `/wedgemaxx/new` and `/round/new` exist only to
+   perform a server mutation, so `lib/offline/routes.ts` blocks them offline regardless of cache.
 
 **Reference data has landed.** Raw CSVs live in [`data/reference/`](data/reference/); the
 normalized, ingestible JSON is [`data/benchmarks/v1/benchmarks.json`](data/benchmarks/v1/benchmarks.json)

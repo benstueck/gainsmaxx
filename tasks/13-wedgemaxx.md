@@ -175,10 +175,10 @@ finishes. Exiting via the X without logging anything loses the seconds since the
 can't sign in myself. typecheck / lint / build / 82 tests are green, and the layout fix below was
 verified against the real compiled CSS, but the timer, row-editing and ⋯ menu need a click-through.
 
-- [ ] **⋯ menu**: **End session** (finish early, score over shots taken) and **Discard session**
+- [x] **⋯ menu**: **End session** (finish early, score over shots taken) and **Discard session**
       (delete, with `ConfirmDialog`) — reuse the round-session patterns, including the
       offline guard on Discard (it's a real server mutation)
-- [ ] Debounced autosave, same shape as the round session
+- [x] Debounced autosave, same shape as the round session
 
 ## Phase 6 — Summary — **done**
 
@@ -188,7 +188,7 @@ verified against the real compiled CSS, but the timer, row-editing and ⋯ menu 
 - [x] Routing wired so a finished session actually opens it: the session-list card links to
       `/summary` when complete, `finishWedgeSession` redirects there, and `/wedgemaxx/[id]`
       redirects complete sessions there instead of bouncing to the list
-- [ ] Optional stretch: per-distance-bucket breakdown (short/mid/long), mirroring Advanced Stats
+- [x] Optional stretch: per-distance-bucket breakdown (short/mid/long), mirroring Advanced Stats
 
 ## Phase 7 — Offline — **code done, on-phone verification outstanding**
 
