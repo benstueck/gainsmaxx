@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { List, Target, User, type LucideIcon } from "lucide-react";
+import { List, Target, Circle, User, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GuardedLink } from "@/components/shell/guarded-link";
 
@@ -11,13 +11,17 @@ type Tab = {
   icon: LucideIcon;
 };
 
-// Three destinations, no action button: starting a round moved to a "+" in
-// the Feed header when Wedgemaxx took the middle slot. Every tab is a
-// GuardedLink — none of these pages is guaranteed cached for a given offline
-// session, and landing on an uncached one is a dead end with no way back.
+// Four destinations, no action button: starting a round or a session lives on
+// a "+" in each list header. Every tab is a GuardedLink — none of these pages
+// is guaranteed cached for a given offline session, and landing on an uncached
+// one is a dead end with no way back.
+//
+// Four is the practical ceiling for this bar at phone widths; a fifth training
+// mode should become a "Practice" hub rather than another tab.
 const tabs: Tab[] = [
   { href: "/feed", label: "Gainsmaxx", icon: List },
   { href: "/wedgemaxx", label: "Wedgemaxx", icon: Target },
+  { href: "/puttmaxx", label: "Puttmaxx", icon: Circle },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
@@ -36,11 +40,11 @@ export function TabBar() {
                 // Navigating to the tab you're already on can't fail offline.
                 skipGuard={active}
                 className={cn(
-                  "flex min-h-tap flex-col items-center justify-center gap-1 text-xs font-medium",
+                  "flex min-h-tap flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium",
                   active ? "text-primary" : "text-muted",
                 )}
               >
-                <Icon size={26} />
+                <Icon size={24} />
                 <span>{label}</span>
               </GuardedLink>
             </li>

@@ -1,6 +1,6 @@
 # 15 — Puttmaxx (practice-green putting training)
 
-**Status:** Phases 1–3 done (engine, analytics, schema applied live — 67 tests). 4–8 pending.
+**Status:** Phases 1–4 done (engine, analytics, schema, navigation + setup). 5–8 pending.
 **Depends on:** 05 (SG engine), 10 (offline infra), 13 (Wedgemaxx patterns to copy)
 **Design:** [`../plans/03-puttmaxx.md`](../plans/03-puttmaxx.md) — read first.
 
@@ -136,11 +136,34 @@ failing the whole sequence: one corrupt putt shouldn't cost the player the other
 
 ## Phase 4 — Navigation + session feed + setup
 
-- [ ] Fourth tab in `components/shell/tab-bar.tsx`
-- [ ] `/puttmaxx` list: sessions newest-first, in-progress pinned as "Continue", empty state
-- [ ] Setup screen: putt count, distance range, "call slope & break" toggle, defaults remembered
-- [ ] Creating a session is server-backed, so the "+" stays a `GuardedLink`, and `/puttmaxx/new`
+- [x] Fourth tab in `components/shell/tab-bar.tsx`
+- [x] `/puttmaxx` list: sessions newest-first, in-progress pinned as "Continue", empty state
+- [x] Setup screen: putt count, distance range, "call slope & break" toggle, defaults remembered
+- [x] Creating a session is server-backed, so the "+" stays a `GuardedLink`, and `/puttmaxx/new`
       goes in `lib/offline/routes.ts` as blocked offline
+
+**Deviation — `call_slope_break` and `express_mode` dropped from v1.** Both appear in the design
+plan's data model, and neither was built. The slope/break toggle was my own idea to soften the
+friction of hunting for a matching putt on a limited practice green, not something asked for — and
+the user explicitly chose distance + slope + break. Express mode was marked optional from the
+start. Building settings nobody has asked for ahead of using the thing is how a setup screen turns
+into a control panel; both are a defaulted nullable column and a checkbox away if real sessions
+show they're wanted.
+
+**The setup screen states the consequence of the range**, since it's the one setting that changes
+what a session can tell you: _"A Tour pro holes about 77% from 5 ft and 32% from 12 ft."_ Going too
+short adds "nearly all makes, which leaves too few misses to read a tendency from"; past ~15 ft it
+warns the drill becomes lag putting. Both verified live at 3–25 ft.
+
+**Verified in the browser:** four tabs fit without wrapping at phone width; a created session
+stored 18 pre-rolled putts balanced exactly `{l2r: 6, r2l: 6, straight: 6}` and
+`{uphill: 6, downhill: 6, flat: 6}`, all in range with no back-to-back repeats; the card reads
+`0/18 putts · 5–12 ft · Continue`.
+
+**Offline, against a production build with the server stopped:** the Puttmaxx tab loads from cache,
+and **+ is blocked by the modal even though `/puttmaxx/new` was cached** by an earlier direct
+visit. That's the blocked-route list doing its job — being cached answers _can_ we render it, not
+_should_ we go there.
 
 ## Phase 5 — Entry loop
 

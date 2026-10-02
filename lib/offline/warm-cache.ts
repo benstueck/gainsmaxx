@@ -22,7 +22,7 @@ import { isBlockedOffline } from "./routes";
  * purpose — it's mutation-only and blocked offline (see routes.ts), so
  * caching it would just be wasted work.
  */
-const SHELL_ROUTES = ["/feed", "/wedgemaxx"];
+const SHELL_ROUTES = ["/feed", "/wedgemaxx", "/puttmaxx"];
 
 /** Unauthenticated routes: warming from here would cache a redirect. */
 const PUBLIC_ROUTES = new Set(["/", "/login", "/signup", "/nux"]);

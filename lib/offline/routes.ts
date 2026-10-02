@@ -15,6 +15,7 @@
 const OFFLINE_BLOCKED_PATHS = new Set([
   "/profile",
   "/wedgemaxx/new",
+  "/puttmaxx/new",
   "/round/new",
 ]);
 
