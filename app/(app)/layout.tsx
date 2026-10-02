@@ -6,7 +6,11 @@ import { TabBar } from "@/components/shell/tab-bar";
 /**
  * Authenticated app shell. Guards every child route: requires a session, ensures
  * a profile exists, and routes to onboarding until a handicap is set. Renders the
- * persistent 3-tab bottom bar.
+ * persistent bottom tab bar.
+ *
+ * Full-screen entry loops (round, wedge and putt sessions) deliberately live
+ * OUTSIDE this group: the tab bar and its bottom padding would fight the
+ * `h-dvh` layout those screens depend on.
  */
 export default async function AppLayout({
   children,

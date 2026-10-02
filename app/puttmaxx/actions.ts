@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { puttSessions } from "@/lib/db/schema";
+import { puttSessions, puttAttempts } from "@/lib/db/schema";
 import { rollSession, validateSessionParams } from "@/lib/putt";
+import type { PuttAttempt } from "@/lib/putt";
 
 /** Create an in-progress session and enter it. */
 export async function createPuttSession(
@@ -54,4 +55,82 @@ export async function deletePuttSession(sessionId: string): Promise<void> {
       and(eq(puttSessions.id, sessionId), eq(puttSessions.userId, user.id)),
     );
   redirect("/puttmaxx");
+}
+
+/**
+ * Replace a session's attempts with the client's current state.
+ *
+ * A full replace rather than an append: it makes the write idempotent, so a
+ * retried save after a dropped connection can't double-insert, and editing an
+ * earlier putt needs no separate path. At ≤100 rows per session the cost is
+ * irrelevant next to getting resync right.
+ */
+async function writeAttempts(
+  sessionId: string,
+  userId: string,
+  attempts: PuttAttempt[],
+  elapsedSeconds: number,
+  status?: "complete",
+) {
+  const db = getDb();
+
+  // Ownership check first — everything below trusts the session id.
+  const [session] = await db
+    .select({ id: puttSessions.id })
+    .from(puttSessions)
+    .where(and(eq(puttSessions.id, sessionId), eq(puttSessions.userId, userId)))
+    .limit(1);
+  if (!session) throw new Error("Session not found.");
+
+  await db.delete(puttAttempts).where(eq(puttAttempts.sessionId, sessionId));
+  if (attempts.length > 0) {
+    await db.insert(puttAttempts).values(
+      attempts.map((a, i) => ({
+        sessionId,
+        puttNumber: i + 1,
+        distance: a.distanceFt,
+        elevation: a.elevation,
+        breakDirection: a.breakDirection,
+        made: a.made,
+        speedError: a.speedError,
+        lineError: a.lineError,
+        misreadLine: a.misreadLine,
+        misreadSpeed: a.misreadSpeed,
+        comebackDistance: a.comebackDistanceFt,
+        comebackMade: a.comebackMade,
+        comebackSpeedError: a.comebackSpeedError,
+        comebackLineError: a.comebackLineError,
+      })),
+    );
+  }
+
+  await db
+    .update(puttSessions)
+    .set({
+      elapsedSeconds,
+      updatedAt: new Date(),
+      ...(status ? { status } : {}),
+    })
+    .where(eq(puttSessions.id, sessionId));
+}
+
+/** Autosave mid-session. */
+export async function savePuttSession(
+  sessionId: string,
+  attempts: PuttAttempt[],
+  elapsedSeconds: number,
+): Promise<void> {
+  const user = await requireUser();
+  await writeAttempts(sessionId, user.id, attempts, elapsedSeconds);
+}
+
+/** Finish — scores over the putts actually hit, so ending early is honest. */
+export async function finishPuttSession(
+  sessionId: string,
+  attempts: PuttAttempt[],
+  elapsedSeconds: number,
+): Promise<void> {
+  const user = await requireUser();
+  await writeAttempts(sessionId, user.id, attempts, elapsedSeconds, "complete");
+  redirect(`/puttmaxx/${sessionId}/summary`);
 }

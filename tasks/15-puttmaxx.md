@@ -1,6 +1,6 @@
 # 15 — Puttmaxx (practice-green putting training)
 
-**Status:** Phases 1–4 done (engine, analytics, schema, navigation + setup). 5–8 pending.
+**Status:** Phases 1–5 done (engine, analytics, schema, navigation, entry loop). 6–8 pending.
 **Depends on:** 05 (SG engine), 10 (offline infra), 13 (Wedgemaxx patterns to copy)
 **Design:** [`../plans/03-puttmaxx.md`](../plans/03-puttmaxx.md) — read first.
 
@@ -167,16 +167,38 @@ _should_ we go there.
 
 ## Phase 5 — Entry loop
 
-- [ ] `h-dvh` (a **definite** height — `min-h-*` does not resolve, as proven in Wedgemaxx), grid
+- [x] `h-dvh` (a **definite** height — `min-h-*` does not resolve, as proven in Wedgemaxx), grid
       pinned, history scrolling independently
-- [ ] The 3×3 grid, large touch targets; two independent misread toggles
-- [ ] Miss follow-up: comeback distance (quick-tap buckets, not a keypad — coarse is fine since
+- [x] The 3×3 grid, large touch targets; two independent misread toggles
+- [x] Miss follow-up: comeback distance (quick-tap buckets, not a keypad — coarse is fine since
       hole SG doesn't depend on it) then the **same 3×3** for the comeback. Same three taps a
       yes/no would have cost, roughly double the data.
-- [ ] Pre-rolled `putts[index]` with a legacy fallback for sessions created before pre-rolling
-- [ ] Elapsed timer counting active-only seconds (`visibilitychange`), tap-to-edit a previous putt,
+- [x] Pre-rolled `putts[index]` with a legacy fallback for sessions created before pre-rolling
+- [x] Elapsed timer counting active-only seconds (`visibilitychange`), tap-to-edit a previous putt,
       ⋯ menu with End session / Discard session
-- [ ] Optional: **express mode** (made/missed only), off by default
+- [ ] ~~Express mode~~ — deferred with `call_slope_break`, see Phase 4
+
+**The route lives at `app/puttmaxx/[id]`, not `app/(app)/puttmaxx/[id]`.** Full-screen entry loops
+sit outside the tab-bar group — its `pb-24` wrapper fights the `h-dvh` layout. The build passed
+either way, so this was only caught by comparing against where the round and wedge sessions live;
+the symptom would have been a tab bar sitting over the grid. Noted in `app/(app)/layout.tsx` so the
+next mode doesn't repeat it.
+
+**All three steps share the same 3×3 footprint** — grid, comeback distance pad, grid — so the dock
+never changes height and nothing jumps under the thumb mid-session.
+
+**Verified in the browser, end to end:**
+
+| Step                 | Result                                            |
+| -------------------- | ------------------------------------------------- |
+| Made a 10-footer     | **+0.61** SG, advanced to putt 2                  |
+| Miss → 3 ft → holed  | 2-putt from 5 ft, **−0.77**, total **−0.16**      |
+| Autosave mid-session | Both attempts in the DB with every field, + timer |
+| Tap-to-edit putt 1   | made → 3-putt, **+0.61 → −1.39**, total **−2.16** |
+| ⋯ → End session      | "Scores the 2 putts you've hit so far"            |
+| Confirm              | `status: complete`, 2 of 6 attempts, elapsed 107s |
+
+Finishing redirects to `/puttmaxx/[id]/summary`, which 404s until Phase 6 — expected.
 
 ## Phase 6 — Summary
 
