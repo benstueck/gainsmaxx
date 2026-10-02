@@ -1,6 +1,6 @@
 # 15 — Puttmaxx (practice-green putting training)
 
-**Status:** Phases 1–5 done (engine, analytics, schema, navigation, entry loop). 6–8 pending.
+**Status:** Phases 1–6 done (engine, analytics, schema, navigation, entry loop, summary). 7–8 pending.
 **Depends on:** 05 (SG engine), 10 (offline infra), 13 (Wedgemaxx patterns to copy)
 **Design:** [`../plans/03-puttmaxx.md`](../plans/03-puttmaxx.md) — read first.
 
@@ -205,14 +205,41 @@ Finishing redirects to `/puttmaxx/[id]/summary`, which 404s until Phase 6 — ex
 
 ## Phase 6 — Summary
 
-- [ ] Total SG headline, with "0.00 = Tour average" stated inline — the baseline is the whole
+- [x] Total SG headline, with "0.00 = Tour average" stated inline — the baseline is the whole
       meaning of the number
-- [ ] Putt distribution, make %, average comeback
-- [ ] Miss map as a heatmap; the three bias gauges honouring the significance gate, each labelled
+- [x] Putt distribution, make %, average comeback
+- [x] Miss map as a heatmap; the three bias gauges honouring the significance gate, each labelled
       with the fault it detects and the population it drew from — showing a bias pooled from more
       putts than the miss map is only honest if the label says so
-- [ ] Misread counts; per-distance-band table
-- [ ] Every-putt list, tap to correct
+- [x] Misread counts; per-distance-band table
+- [x] Every-putt list, tap to correct
+
+**Reused rather than rebuilt**, after the keypad lesson: the diverging bar the round summary
+already had is now `components/ui/diverging-bar.tsx`, shared by `SgBar` and all three gauges. The
+fill colour is the caller's to choose, because leaning left isn't "bad" the way losing strokes is,
+so the gauges deliberately avoid the positive/negative palette. Corrections go through
+`?edit=1` into the existing entry loop — the same pattern the round summary uses — rather than a
+second editor.
+
+**Verified on a seeded 18-putt session simulating a player who under-reads:**
+
+|               |                                                                           |
+| ------------- | ------------------------------------------------------------------------- |
+| Total SG      | **−5.41**, with "0.00 would be Tour-average putting over these distances" |
+| Counts        | Made 6/18 (33%) · putts 6/11/1 · leave 2.3 ft                             |
+| Miss map      | 6 made centre, 4 left / 6 right / 2 fast-left                             |
+| **Direction** | Left 13 – 11 Right → _"Not enough data yet — ordinary at 24"_             |
+| **Read**      | High 0 – 7 Low → **"Leans Low — clear enough at 7 to act on"**            |
+| **Speed**     | Fast 2 – 0 Slow → _"Not enough data yet — ordinary at 2"_                 |
+
+That middle block is the entire point of the two-gauge split, now visible on real-shaped data: the
+fault lands on the read gauge, and the direction gauge — fed _more_ samples — correctly refuses to
+call a 13–11 split anything at all.
+
+The `unflaggedLowMisses` callout fired too: _"7 misses on the low side weren't flagged as a
+misread. Missing low without noticing usually means the read, not the stroke."_ That's the line
+where the measured read and the self-report disagree, and it's the most actionable sentence on the
+screen.
 
 ## Phase 7 — Offline-first
 

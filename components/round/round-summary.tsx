@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
+import { DivergingBar } from "@/components/ui/diverging-bar";
 import { deleteRound, updateRoundHandicap } from "@/app/round/actions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BigButton } from "@/components/ui/big-button";
@@ -36,23 +37,11 @@ const fmtPct = (made: number, attempted: number) =>
 
 /** Diverging bar: green right of the zero midpoint for gained, red left for lost. */
 function SgBar({ value, max }: { value: number; max: number }) {
-  const pct = max === 0 ? 0 : Math.min(50, (Math.abs(value) / max) * 50);
-  const positive = value >= 0;
   return (
-    <div className="relative h-2.5 w-full rounded-full bg-surface-2">
-      <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-border" />
-      <div
-        className={cn(
-          "absolute top-0 h-full rounded-full",
-          positive ? "bg-positive" : "bg-negative",
-        )}
-        style={
-          positive
-            ? { left: "50%", width: `${pct}%` }
-            : { right: "50%", width: `${pct}%` }
-        }
-      />
-    </div>
+    <DivergingBar
+      tilt={max === 0 ? 0 : value / max}
+      fillClassName={value >= 0 ? "bg-positive" : "bg-negative"}
+    />
   );
 }
 
