@@ -347,3 +347,55 @@ short excellent one, and the wrong thing gets celebrated. A test pins that.
   and every query scopes by `user_id` in its `where`. **Not** verified behaviourally with two
   signed-in accounts the way Wedgemaxx was — the admin connection used for checks bypasses RLS,
   so that test needs two real browser sessions. Worth doing in the on-phone pass.
+
+## Post-launch fixes (from the first real on-phone session)
+
+The user logged 5 putts, every one of them Slow Left, and reported two problems. Both were real.
+
+### 1. The summary refused to report what it had plainly seen
+
+Every gauge read "not enough data yet" despite 5 of 5 left and 5 of 6 slow. The gate was working
+correctly — 5–0 is p = 0.063, just the wrong side of 0.05 — but the output was useless.
+
+The underlying error was mine, and conceptual: **I conflated describing a session with diagnosing
+a tendency.** "You missed left 5 of 5 today" is a _fact_ and needs no statistics; "you have a left
+bias" is a _claim_ and does. Putting the significance gate on both meant the summary stayed silent
+about something the player could see with their own eyes.
+
+The gauges now lead with the count and scope the caveat to the inference:
+
+> **5 of 5 Left.** Not a tendency yet — keep logging.
+
+The threshold is unchanged at 0.05. Nothing is called a tendency that wasn't before; the summary
+just stops pretending it didn't notice.
+
+### 2. The low-side callout was ungated — a real bug
+
+It fired on a _single_ low miss, asserting a cause ("usually means the read, not the stroke"). An
+inferential claim off n = 1 is exactly the astrology the significance gate exists to prevent, and
+this callout was the one place that discipline hadn't been applied. It's now gated on the read bias
+actually being **called** and leaning low.
+
+Worth noting why the count was 1 at all, since it looked wrong: it counts **low-side** misses, not
+all misses. The player missed left every time, but left is the low side only on an R→L putt — on
+their two L→R putts, left is the _high_ side. One of five qualified. The number was right; the
+message had no business being shown.
+
+### 3. Queued-finish modal
+
+Tapping Finish offline previously left the player on the entry screen with no explanation, which
+reads as the button having done nothing. It now says the session is saved and will finish on
+reconnect. `OfflineNoticeModal`'s copy became overridable rather than a second modal being written
+— the default "that needs a connection" would have been plainly wrong, since the finish _succeeded_
+locally, but the shell and dismiss behaviour are identical.
+
+**Verified against the user's exact session**, recreated row for row: Direction reads
+"5 of 5 Left", Speed reads "5 of 6 Slow", the low-side callout is gone, and finishing with the
+server stopped shows "Saved — finishing when you're back online".
+
+### Process note
+
+The first attempt at fix 1 **silently did nothing** — Prettier had reformatted the source, the
+string replacement missed, and the script printed its success message regardless. It was caught
+only by grepping afterwards. Replacements in this repo should assert their target matched before
+claiming to have applied.

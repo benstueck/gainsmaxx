@@ -69,6 +69,7 @@ export function PuttSession({
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, startDiscard] = useTransition();
   const [finishing, setFinishing] = useState(false);
+  const [queuedFinish, setQueuedFinish] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"synced" | "offline">("synced");
   const offlineGuard = useOfflineGuard();
 
@@ -219,7 +220,13 @@ export function PuttSession({
     setFinishing(true);
     const ok = await attemptFinish(attempts);
     // On success the redirect already threw; only a queued finish lands here.
-    if (!ok) setFinishing(false);
+    // Say so explicitly: the session IS finished as far as the player is
+    // concerned, and silently staying on the entry screen reads as the button
+    // having done nothing.
+    if (!ok) {
+      setFinishing(false);
+      setQueuedFinish(true);
+    }
   }
 
   // On mount, a leftover local draft (from a sync that never succeeded — the
@@ -526,6 +533,15 @@ export function PuttSession({
       <OfflineNoticeModal
         open={offlineGuard.blocked}
         onClose={offlineGuard.dismiss}
+      />
+      {/* Not a refusal — the finish is saved and queued, so the copy says so
+          rather than reusing the default "that needs a connection". */}
+      <OfflineNoticeModal
+        open={queuedFinish}
+        onClose={() => setQueuedFinish(false)}
+        title="Saved — finishing when you&rsquo;re back online"
+        description="Every putt is stored on this phone. The session will finish and its summary will open as soon as you have a connection, even if you close the app."
+        closeLabel="Got it"
       />
     </>
   );

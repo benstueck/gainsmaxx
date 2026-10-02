@@ -4,11 +4,16 @@ import type { BiasResult } from "@/lib/putt";
 /**
  * One tendency gauge.
  *
- * The tilt always renders, so the raw counts are visible — but the *verdict*
- * only appears once the sample supports it. With ten misses a 6–4 split is the
- * single most likely outcome for a player with no tendency at all; calling that
- * a bias would send them to the practice green to fix a problem they don't
- * have, which is worse than saying nothing.
+ * Describing and diagnosing are deliberately separated, which they weren't at
+ * first. "You missed left 5 of 5 today" is a *fact* and needs no statistics;
+ * "you have a left bias" is a *claim* and does. Putting the significance gate
+ * on both made the summary refuse to report something the player could plainly
+ * see — 5 of 5 left reads as p = 0.063 and so went unmentioned entirely.
+ *
+ * So the count is always stated, and only the word "tendency" waits for the
+ * evidence. The gate itself is unchanged: with ten misses a 6–4 split is the
+ * single most likely outcome for a player with no tendency at all, and calling
+ * that a bias would send them to fix a problem they don't have.
  *
  * `detects` and `population` are shown rather than implied. Three gauges draw
  * from deliberately different populations — the stroke gauge pools comebacks
@@ -54,15 +59,28 @@ export function BiasGauge<T extends string>({
       <p className="mt-1.5 text-xs">
         {bias.n === 0 ? (
           <span className="text-muted">No misses to read yet.</span>
+        ) : bias.leaning == null ? (
+          <span className="text-muted">
+            Even at {bias.n} — no lean either way.
+          </span>
         ) : bias.significant ? (
           <span className="font-semibold text-foreground">
-            Leans {bias.leaning === bias.sides[0] ? labels[0] : labels[1]} —
-            clear enough at {bias.n} to act on.
+            {Math.max(a, b)} of {bias.n}{" "}
+            {bias.leaning === bias.sides[0] ? labels[0] : labels[1]} — clear
+            enough to act on.
           </span>
         ) : (
-          <span className="text-muted">
-            Not enough data yet — a split like this is ordinary at {bias.n}.
-          </span>
+          <>
+            {/* The fact first: it happened, and needs no statistics. Only the
+                word "tendency" waits for the evidence. */}
+            <span className="font-semibold text-foreground">
+              {Math.max(a, b)} of {bias.n}{" "}
+              {bias.leaning === bias.sides[0] ? labels[0] : labels[1]}.
+            </span>{" "}
+            <span className="text-muted">
+              Not a tendency yet — keep logging.
+            </span>
+          </>
         )}{" "}
         <span className="text-muted">({population})</span>
       </p>

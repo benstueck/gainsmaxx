@@ -2,14 +2,28 @@
 
 import { BigButton } from "@/components/ui/big-button";
 
-/** Shared "that needs a connection" notice — used anywhere an offline tap
- *  is blocked instead of being allowed to navigate/act and fail. */
+/**
+ * Shared offline notice — used anywhere an offline tap is blocked instead of
+ * being allowed to navigate/act and fail.
+ *
+ * The copy is overridable because not every offline moment is a refusal. A
+ * queued finish, for instance, *succeeded* locally and is waiting to sync, so
+ * telling the player "that needs a connection" would be plainly wrong — but
+ * the shell, the dismiss behaviour and the safe-area padding are identical, so
+ * the markup is shared rather than duplicated.
+ */
 export function OfflineNoticeModal({
   open,
   onClose,
+  title = "You\u2019re offline",
+  description = "That needs a connection. Whatever\u2019s already open \u2014 including a round in progress \u2014 keeps working offline.",
+  closeLabel = "OK",
 }: {
   open: boolean;
   onClose: () => void;
+  title?: string;
+  description?: string;
+  closeLabel?: string;
 }) {
   if (!open) return null;
 
@@ -26,15 +40,12 @@ export function OfflineNoticeModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="offline-notice-title" className="text-lg font-bold">
-          You&rsquo;re offline
+          {title}
         </h2>
-        <p className="mt-1.5 text-sm text-muted">
-          That needs a connection. Whatever&rsquo;s already open — including a
-          round in progress — keeps working offline.
-        </p>
+        <p className="mt-1.5 text-sm text-muted">{description}</p>
         <div className="mt-6">
           <BigButton block onClick={onClose}>
-            OK
+            {closeLabel}
           </BigButton>
         </div>
       </div>

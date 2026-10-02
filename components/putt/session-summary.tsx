@@ -154,18 +154,26 @@ export function PuttSessionSummaryView({
             />
 
             {/* Where the measured read and the self-report disagree — the most
-                actionable line in the summary when it fires. */}
-            {s.unflaggedLowMisses > 0 && (
-              <p className="mt-3 rounded-app bg-surface p-3 text-xs">
-                <span className="font-semibold">
-                  {s.unflaggedLowMisses} miss
-                  {s.unflaggedLowMisses === 1 ? "" : "es"} on the low side
-                </span>{" "}
-                {s.unflaggedLowMisses === 1 ? "wasn't" : "weren't"} flagged as a
-                misread. Missing low without noticing usually means the read,
-                not the stroke.
-              </p>
-            )}
+                actionable line in the summary when it fires.
+
+                Gated on the read bias actually being CALLED, not merely on the
+                count being non-zero. It asserts a cause ("usually means the
+                read"), and an inferential claim off one or two low misses is
+                exactly the astrology the significance gate exists to prevent —
+                this callout was the one place that discipline wasn't applied. */}
+            {s.readBias.significant &&
+              s.readBias.leaning === "low" &&
+              s.unflaggedLowMisses > 0 && (
+                <p className="mt-3 rounded-app bg-surface p-3 text-xs">
+                  <span className="font-semibold">
+                    {s.unflaggedLowMisses} miss
+                    {s.unflaggedLowMisses === 1 ? "" : "es"} on the low side
+                  </span>{" "}
+                  {s.unflaggedLowMisses === 1 ? "wasn't" : "weren't"} flagged as
+                  a misread. Missing low without noticing usually means the
+                  read, not the stroke.
+                </p>
+              )}
             {(s.misreadLineCount > 0 || s.misreadSpeedCount > 0) && (
               <p className="mt-2 text-xs text-muted">
                 You flagged {s.misreadLineCount} line and {s.misreadSpeedCount}{" "}
