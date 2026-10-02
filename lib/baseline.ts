@@ -14,12 +14,21 @@ export type BaselineOption = {
   baseline: Baseline;
 };
 
-export function baselineOptions(handicap: number | null): BaselineOption[] {
+/**
+ * `handicapLabel` exists because the same option means different things in
+ * different places: on Profile it's "My handicap" (your index now), but on a
+ * round summary it's "Played off" (the index that round was snapshotted at,
+ * which may not be your current one).
+ */
+export function baselineOptions(
+  handicap: number | null,
+  handicapLabel = "My handicap",
+): BaselineOption[] {
   const opts: BaselineOption[] = [];
   if (handicap != null) {
     opts.push({
       value: "handicap",
-      label: `My handicap (${handicap.toFixed(1)})`,
+      label: `${handicapLabel} (${handicap.toFixed(1)})`,
       baseline: handicap,
     });
   }
@@ -43,4 +52,35 @@ export function resolveBaseline(
   if (defaultBaseline === "tour") return "tour";
   const n = Number(defaultBaseline);
   return Number.isFinite(n) ? n : "tour";
+}
+
+/**
+ * Parse a stored `rounds.baseline_snapshot`. It's a `numeric` column, which the
+ * driver hands back as a *string*, so this is the single place that conversion
+ * happens — reading it raw elsewhere silently yields a string where a
+ * `Baseline` is expected.
+ */
+export function parseHandicapSnapshot(raw: string | null): number | null {
+  if (raw == null) return null;
+  // Number("") is 0, not NaN — so an empty value would parse as *scratch*,
+  // silently rescoring the round against the toughest possible baseline.
+  // Reject blanks before converting.
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * The baseline one round should be scored against.
+ *
+ * A round is scored off the index it was **played off**, so changing your
+ * handicap later cannot rewrite history. The fallback applies only to rounds
+ * created before a handicap was ever set.
+ */
+export function resolveRoundBaseline(
+  snapshot: number | null,
+  fallback: Baseline,
+): Baseline {
+  return snapshot ?? fallback;
 }

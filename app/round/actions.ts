@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -99,6 +100,43 @@ export async function saveRound(
 }
 
 /** Permanently delete a round (holes/shots cascade). */
+/**
+ * Correct the handicap index a round was played off.
+ *
+ * Needed because you often set your index *after* a round, which would
+ * otherwise bake a stale number into that round's SG permanently.
+ *
+ * Deliberately does **not** touch `profiles.handicap`: correcting one round is
+ * a statement about that round, not about your current index. Nothing is
+ * recomputed either — SG is derived at read time, so the summary, the Feed and
+ * career stats all pick this up on their next load.
+ */
+export async function updateRoundHandicap(
+  roundId: string,
+  handicap: number | null,
+): Promise<void> {
+  const user = await requireUser();
+
+  // Matches the profiles.handicap column: numeric(4, 1).
+  let value: string | null = null;
+  if (handicap != null) {
+    if (!Number.isFinite(handicap) || handicap < 0 || handicap > 54) {
+      throw new Error("Handicap index must be between 0 and 54.");
+    }
+    value = handicap.toFixed(1);
+  }
+
+  const db = getDb();
+  await db
+    .update(rounds)
+    .set({ baselineSnapshot: value })
+    .where(and(eq(rounds.id, roundId), eq(rounds.userId, user.id)));
+
+  revalidatePath(`/round/${roundId}/summary`);
+  revalidatePath("/feed");
+  revalidatePath("/profile");
+}
+
 export async function deleteRound(roundId: string): Promise<void> {
   const user = await requireUser();
   const db = getDb();

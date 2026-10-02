@@ -4,9 +4,17 @@ import { getDb } from "./index";
 import { rounds, holes as holesT, shots as shotsT } from "./schema";
 import { holeShotInputs, type HoleState, type ShotEnd } from "@/lib/round";
 import { roundStrokesGained, type Baseline, type RoundSummary } from "@/lib/sg";
+import { parseHandicapSnapshot, resolveRoundBaseline } from "@/lib/baseline";
 
 type HoleRow = typeof holesT.$inferSelect;
 type ShotRow = typeof shotsT.$inferSelect;
+
+/** The handicap index a round was played off, as a number. */
+export function roundHandicapSnapshot(round: {
+  baselineSnapshot: string | null;
+}): number | null {
+  return parseHandicapSnapshot(round.baselineSnapshot);
+}
 
 /** Reconstruct the local HoleState[] for one round from its DB rows. */
 function toHoleStates(holeRows: HoleRow[], shotRows: ShotRow[]): HoleState[] {
@@ -71,17 +79,27 @@ export type FeedRound = {
   courseName: string | null;
   numHoles: number;
   status: "in_progress" | "complete";
+  /** The handicap index this round was played off; null if none was set. */
+  handicapSnapshot: number | null;
   summary: RoundSummary;
   holes: HoleState[];
 };
 
 /**
- * Load all of a user's rounds (newest first) with a computed SG summary vs the
- * given baseline. Three queries total regardless of round count.
+ * Load all of a user's rounds (newest first), each scored against **the
+ * handicap it was played off** rather than one baseline applied to all of them.
+ *
+ * That snapshot is what makes historical SG stable: without it, raising or
+ * lowering your index silently rewrote every past round, so the trend you'd
+ * most want to read — "am I getting better?" — was the one thing it couldn't
+ * tell you.
+ *
+ * `fallbackBaseline` is used only for rounds with no snapshot (created while
+ * the profile had no handicap set). Three queries total regardless of count.
  */
 export async function loadUserRounds(
   userId: string,
-  baseline: Baseline,
+  fallbackBaseline: Baseline,
 ): Promise<FeedRound[]> {
   const db = getDb();
 
@@ -105,9 +123,10 @@ export async function loadUserRounds(
   return roundRows.map((round) => {
     const roundHoleRows = holeRows.filter((h) => h.roundId === round.id);
     const holes = toHoleStates(roundHoleRows, shotRows);
+    const handicapSnapshot = roundHandicapSnapshot(round);
     const summary = roundStrokesGained(
       holes.map((h) => ({ par: h.par, shots: holeShotInputs(h) })),
-      baseline,
+      resolveRoundBaseline(handicapSnapshot, fallbackBaseline),
     );
     return {
       id: round.id,
@@ -115,6 +134,7 @@ export async function loadUserRounds(
       courseName: round.courseName,
       numHoles: round.numHoles,
       status: round.status,
+      handicapSnapshot,
       summary,
       holes,
     };

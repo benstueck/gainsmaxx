@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
-import { deleteRound } from "@/app/round/actions";
+import { deleteRound, updateRoundHandicap } from "@/app/round/actions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { BigButton } from "@/components/ui/big-button";
+import { Input } from "@/components/ui/input";
 import { GuardedLink } from "@/components/shell/guarded-link";
 import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
 import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
@@ -61,6 +63,7 @@ export function RoundSummary({
   courseName,
   playedAt,
   handicap,
+  hasSnapshot,
   defaultBaseline,
   holes,
 }: {
@@ -69,18 +72,39 @@ export function RoundSummary({
   numHoles: number;
   courseName: string | null;
   playedAt: string;
+  /** The index this round was played off (falls back to the current one). */
   handicap: number | null;
+  /** False when this round predates having a handicap set, so the number shown
+   *  is a fallback rather than a real snapshot. */
+  hasSnapshot: boolean;
   defaultBaseline: string;
   holes: HoleState[];
 }) {
-  const options = baselineOptions(handicap);
+  const options = baselineOptions(handicap, "Played off");
   const initialValue = options.some((o) => o.value === defaultBaseline)
     ? defaultBaseline
     : options[0].value;
   const [selectedValue, setSelectedValue] = useState(initialValue);
   const [deleting, startDelete] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [editingHandicap, setEditingHandicap] = useState(false);
+  const [handicapDraft, setHandicapDraft] = useState(
+    handicap != null ? handicap.toFixed(1) : "",
+  );
+  const [savingHandicap, startSaveHandicap] = useTransition();
   const offlineGuard = useOfflineGuard();
+
+  function onSaveHandicap() {
+    const trimmed = handicapDraft.trim();
+    const value = trimmed === "" ? null : Number(trimmed);
+    if (value != null && (!Number.isFinite(value) || value < 0 || value > 54)) {
+      return;
+    }
+    startSaveHandicap(() => {
+      void updateRoundHandicap(roundId, value);
+      setEditingHandicap(false);
+    });
+  }
 
   function onConfirmDelete() {
     startDelete(() => {
@@ -306,14 +330,29 @@ export function RoundSummary({
             Edit round
           </GuardedLink>
         )}
-        <button
-          type="button"
-          onClick={() => offlineGuard.guard(() => setConfirmingDelete(true))}
-          disabled={deleting}
-          className="min-h-tap text-sm font-semibold text-negative disabled:opacity-40"
-        >
-          {deleting ? "Deleting…" : "Delete round"}
-        </button>
+        {/* Secondary actions, paired. The index lives here rather than the
+            header: it's reference detail you occasionally correct, not a
+            headline number — the baseline selector already states it up top. */}
+        <div className="flex items-stretch">
+          <button
+            type="button"
+            onClick={() => offlineGuard.guard(() => setEditingHandicap(true))}
+            className="min-h-tap flex-1 text-sm font-semibold text-muted"
+          >
+            {handicap == null
+              ? "Set index"
+              : `${handicap.toFixed(1)} index${hasSnapshot ? "" : " (not recorded)"}`}
+          </button>
+          <div className="my-2 w-px shrink-0 bg-border" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => offlineGuard.guard(() => setConfirmingDelete(true))}
+            disabled={deleting}
+            className="min-h-tap flex-1 text-sm font-semibold text-negative disabled:opacity-40"
+          >
+            {deleting ? "Deleting…" : "Delete round"}
+          </button>
+        </div>
       </div>
 
       <ConfirmDialog
@@ -326,6 +365,61 @@ export function RoundSummary({
         onConfirm={onConfirmDelete}
         onCancel={() => setConfirmingDelete(false)}
       />
+      {/* Correcting the index this round was played off. Matches
+          ConfirmDialog's shell so the two modals feel like one system. */}
+      {editingHandicap && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="handicap-dialog-title"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 sm:items-center"
+          onClick={() => setEditingHandicap(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-t-app bg-background p-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:rounded-app sm:pb-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="handicap-dialog-title" className="text-lg font-bold">
+              Handicap for this round
+            </h2>
+            <p className="mt-1.5 text-sm text-muted">
+              The index you played off. Changes this round&rsquo;s strokes
+              gained only — it won&rsquo;t touch your current index or any other
+              round.
+            </p>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={handicapDraft}
+              autoFocus
+              onChange={(e) => setHandicapDraft(e.target.value)}
+              placeholder="e.g. 12.5"
+              aria-label="Handicap index for this round"
+              className="mt-4"
+            />
+            <div className="mt-6 flex flex-col gap-3">
+              <BigButton
+                block
+                disabled={savingHandicap}
+                onClick={onSaveHandicap}
+              >
+                {savingHandicap ? "Saving…" : "Save"}
+              </BigButton>
+              <BigButton
+                variant="secondary"
+                block
+                disabled={savingHandicap}
+                onClick={() => {
+                  setHandicapDraft(handicap != null ? handicap.toFixed(1) : "");
+                  setEditingHandicap(false);
+                }}
+              >
+                Cancel
+              </BigButton>
+            </div>
+          </div>
+        </div>
+      )}
       <OfflineNoticeModal
         open={offlineGuard.blocked}
         onClose={offlineGuard.dismiss}

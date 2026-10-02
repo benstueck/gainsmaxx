@@ -63,6 +63,10 @@ export function FeedCard({ round }: { round: FeedRound }) {
           </p>
           <p className="text-sm text-muted">
             {date} · {round.numHoles} holes
+            {/* SG only means something against a stated baseline, so the card
+                says which index this round was scored off. */}
+            {round.handicapSnapshot != null &&
+              ` · ${round.handicapSnapshot.toFixed(1)} index`}
           </p>
         </div>
         {inProgress ? (

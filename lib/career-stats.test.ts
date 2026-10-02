@@ -13,6 +13,7 @@ function round(
     courseName: null,
     numHoles: holesPlayed,
     status: "complete",
+    handicapSnapshot: null,
     summary: {
       byCategory: {
         ott: total / 4,

@@ -21,6 +21,7 @@ criteria**. Work top-down; keep checkboxes and the status line honest so any ses
 | 11  | [QA & deploy](11-qa-deploy.md)                                        | in progress | Live at gainsmaxx.benstueck.com; final on-phone offline re-test outstanding |
 | 12  | [Advanced stats (distance breakdown + FIR/GIR)](12-advanced-stats.md) | in progress | Implemented + unit tested; not yet verified in the browser                  |
 | 13  | [Wedgemaxx](13-wedgemaxx.md)                                          | in progress | All 8 phases done + browser-verified; on-phone pass outstanding             |
+| 14  | [Handicap snapshot per round](14-handicap-snapshot.md)                | in progress | Code done + unit tested; browser check of the edit flow outstanding         |
 
 ## Blocked-on-user
 
