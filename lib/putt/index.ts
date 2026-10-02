@@ -14,6 +14,16 @@ export {
 
 export { rollSession } from "./generator";
 
+export { summarizeSession } from "./analytics";
+export type {
+  MissCell,
+  PuttDistanceBand,
+  PuttSessionSummary,
+} from "./analytics";
+
+export { detectBias, twoSidedBinomialP, BIAS_ALPHA } from "./stats";
+export type { BiasResult } from "./stats";
+
 export {
   DEFAULT_PUTT_COUNT,
   DEFAULT_MIN_DISTANCE_FT,

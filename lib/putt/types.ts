@@ -36,6 +36,15 @@ export interface PuttSpec {
  * face angle in the session, not contamination.
  */
 export interface PuttAttempt extends PuttSpec {
+  /**
+   * Invariant: `made === (speedError == null && lineError == null)`.
+   *
+   * The 3×3 grid enforces it — its centre button *is* "Made!", so any other
+   * cell carries at least one error. The columns stay independently nullable
+   * because that's the natural DB shape, but nothing should ever write a miss
+   * with no error, and the analytics drop such a row rather than counting it
+   * as a make.
+   */
   made: boolean;
   speedError: SpeedError | null;
   lineError: LineError | null;

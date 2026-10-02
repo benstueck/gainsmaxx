@@ -1,6 +1,6 @@
 # 15 — Puttmaxx (practice-green putting training)
 
-**Status:** Phase 1 done (engine, generator, params — 34 tests). Phases 2–8 pending.
+**Status:** Phases 1–2 done (engine, generator, params, analytics — 61 tests). 3–8 pending.
 **Depends on:** 05 (SG engine), 10 (offline infra), 13 (Wedgemaxx patterns to copy)
 **Design:** [`../plans/03-puttmaxx.md`](../plans/03-puttmaxx.md) — read first.
 
@@ -52,19 +52,41 @@ A rolled 18-putt session comes out exactly `{l2r: 6, r2l: 6, straight: 6}` and
 
 ## Phase 2 — Analytics (`lib/putt/analytics.ts`)
 
-- [ ] Miss map (3×3 counts + percentages), make %, putt distribution, average comeback distance
-- [ ] **Every figure declares its population** — make % and the miss map over _first putts_ (so
+- [x] Miss map (3×3 counts + percentages), make %, putt distribution, average comeback distance
+- [x] **Every figure declares its population** — make % and the miss map over _first putts_ (so
       sessions stay comparable), bias over _all putts_ (where the sample-size win is). Comebacks
       are short and conditional on a miss, so pooling them silently would inflate make % and
       shrink the average miss.
-- [ ] Distance-band breakdown, reusing the `distanceBreakdown` shape from `lib/wedge/`
-- [ ] Misread tallies, line and speed held separate
-- [ ] **`detectBias(misses)` with a significance gate** — returns a direction _and_ whether the
+- [x] Distance-band breakdown, reusing the `distanceBreakdown` shape from `lib/wedge/`
+- [x] Misread tallies, line and speed held separate
+- [x] **`detectBias(misses)` with a significance gate** — returns a direction _and_ whether the
       sample supports calling it. With 10 misses, 6–4 is noise; reporting it as a bias would send
       the user to fix a problem they don't have. Below threshold the gauge renders
       "not enough data yet".
-- [ ] Tests, including explicitly that a 6–4 split at n=10 is **not** reported as a bias and that a
+- [x] Tests, including explicitly that a 6–4 split at n=10 is **not** reported as a bias and that a
       lopsided split at a healthy n **is**.
+
+**Verified on simulated players** (18 putts, 5–12 ft, seeded):
+
+| Simulated fault   | Direction gauge      | Read gauge             |
+| ----------------- | -------------------- | ---------------------- |
+| None              | 9–13 _(not called)_  | 3–4 _(not called)_     |
+| **Under-reads**   | 10–12 _(not called)_ | **0–7 → LOW, p=0.016** |
+| **Pulls it left** | 15–7 _(not called)_  | 4–3 _(not called)_     |
+
+Row 2 is the design working: the fault lands on the right gauge and the wrong gauge stays quiet.
+Row 1 shows the gate holding — a clean player is told nothing.
+
+**Row 3 was the useful surprise.** A player pulling _every_ first putt wasn't called, because the
+simulated comeback misses were random and diluted the pooled sample. That's the opposite of the
+argument for pooling comebacks (that a 3 ft putt barely breaks, so it isolates face angle). The
+counter-argument is equally plausible: misses from 3 ft are rare and idiosyncratic — lip-outs,
+carelessness — and therefore closer to noise.
+
+Simulation can't settle it, because the answer depends on how a real player actually putts. So
+`firstPuttDirectionBias` is computed alongside the pooled one. If they agree, pooling is safe and
+the extra sample is free; if they persistently disagree, comebacks are diluting and the headline
+should switch. Real sessions get to decide.
 
 ## Phase 3 — Schema
 
