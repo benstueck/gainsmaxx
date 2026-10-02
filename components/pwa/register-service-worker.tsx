@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { flushAllDrafts } from "@/lib/offline/round-sync";
 import { flushAllWedgeDrafts } from "@/lib/offline/wedge-sync";
+import { flushAllPuttDrafts } from "@/lib/offline/putt-sync";
 import { warmOfflineCache } from "@/lib/offline/warm-cache";
 
 /** Registers the service worker built from app/sw.ts (served via the
@@ -31,6 +32,7 @@ export function RegisterServiceWorker() {
     const flush = () => {
       void flushAllDrafts();
       void flushAllWedgeDrafts();
+      void flushAllPuttDrafts();
     };
     flush();
     window.addEventListener("online", flush);

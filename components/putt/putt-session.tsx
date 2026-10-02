@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { X, MoreVertical } from "lucide-react";
+import { X, MoreVertical, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BigButton } from "@/components/ui/big-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { GuardedLink } from "@/components/shell/guarded-link";
 import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
 import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
+import { isRedirectError } from "@/lib/offline/redirect-error";
+import {
+  clearPuttDraft,
+  getPuttDraft,
+  putPuttDraft,
+} from "@/lib/offline/putt-sync";
 import { NumericKeypad } from "@/components/round/numeric-keypad";
 import { PuttGrid, type GridChoice } from "./putt-grid";
 import {
@@ -63,6 +69,7 @@ export function PuttSession({
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, startDiscard] = useTransition();
   const [finishing, setFinishing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"synced" | "offline">("synced");
   const offlineGuard = useOfflineGuard();
 
   /**
@@ -104,13 +111,54 @@ export function PuttSession({
   const puttNumber = Math.min(index + 1, puttCount);
   const summary = summarizeSession(attempts);
 
+  // Local-first: try Supabase, and if that fails (offline or a transient
+  // error) queue the state in IndexedDB rather than losing it.
+  async function attemptSave(next: PuttAttempt[]): Promise<boolean> {
+    try {
+      await savePuttSession(sessionId, next, elapsedRef.current);
+      await clearPuttDraft(sessionId);
+      setSyncStatus("synced");
+      return true;
+    } catch {
+      await putPuttDraft(sessionId, next, elapsedRef.current, false);
+      setSyncStatus("offline");
+      return false;
+    }
+  }
+
   function persist(next: PuttAttempt[]) {
     setAttempts(next);
-    void savePuttSession(sessionId, next, elapsedRef.current).catch(() => {
-      // Phase 7 queues this to IndexedDB; for now a failed autosave is
-      // recovered by the next successful one, since every save is a full
-      // replace rather than an append.
-    });
+    void attemptSave(next);
+  }
+
+  /**
+   * Finishing, with the trap that has now bitten twice.
+   *
+   * `finishPuttSession` redirects, and Next encodes a *successful* redirect as
+   * a thrown digest — so the two lines after the await never run on success.
+   * The redirect branch must therefore clear the draft itself; skipping it is
+   * exactly the bug that left stale drafts queued forever in the round flow,
+   * and again in Wedgemaxx.
+   *
+   * The draft is written BEFORE the attempt, so a finish that never reaches
+   * the server survives a force-quit as a queued finish.
+   */
+  async function attemptFinish(next: PuttAttempt[]): Promise<boolean> {
+    await putPuttDraft(sessionId, next, elapsedRef.current, true);
+    try {
+      await finishPuttSession(sessionId, next, elapsedRef.current);
+      await clearPuttDraft(sessionId);
+      setSyncStatus("synced");
+      return true;
+    } catch (err) {
+      if (isRedirectError(err)) {
+        await clearPuttDraft(sessionId);
+        setSyncStatus("synced");
+        throw err;
+      }
+      setSyncStatus("offline");
+      return false;
+    }
   }
 
   function resetEntry() {
@@ -167,12 +215,46 @@ export function PuttSession({
     });
   }
 
-  function onFinish() {
+  async function onFinish() {
     setFinishing(true);
-    void finishPuttSession(sessionId, attempts, elapsedRef.current).catch(() =>
-      setFinishing(false),
-    );
+    const ok = await attemptFinish(attempts);
+    // On success the redirect already threw; only a queued finish lands here.
+    if (!ok) setFinishing(false);
   }
+
+  // On mount, a leftover local draft (from a sync that never succeeded — the
+  // page reloaded while offline, say) takes priority over the server's copy:
+  // it's strictly newer, since it only exists because a push already failed.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const draft = await getPuttDraft(sessionId);
+      if (cancelled || !draft) return;
+      setAttempts(draft.attempts);
+      setElapsed(draft.elapsedSeconds);
+      elapsedRef.current = draft.elapsedSeconds;
+      if (draft.wantsFinish) await attemptFinish(draft.attempts);
+      else await attemptSave(draft.attempts);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once per mounted session (sessionId is stable for its lifetime).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Retry whatever's queued the moment connectivity returns.
+  useEffect(() => {
+    async function retry() {
+      const draft = await getPuttDraft(sessionId);
+      if (!draft) return;
+      if (draft.wantsFinish) await attemptFinish(draft.attempts);
+      else await attemptSave(draft.attempts);
+    }
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   const headerNote =
     phase === "comebackDistance"
@@ -203,9 +285,17 @@ export function PuttSession({
                 : `Putt ${puttNumber} of ${puttCount}`}
             </div>
             <div className="text-xs tabular-nums text-muted">
-              {formatClock(elapsed)}
-              {attempts.length > 0 &&
-                ` · ${summary.totalSg >= 0 ? "+" : ""}${summary.totalSg.toFixed(2)} SG`}
+              {syncStatus === "offline" ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-negative">
+                  <WifiOff size={12} /> Saved locally
+                </span>
+              ) : (
+                <>
+                  {formatClock(elapsed)}
+                  {attempts.length > 0 &&
+                    ` · ${summary.totalSg >= 0 ? "+" : ""}${summary.totalSg.toFixed(2)} SG`}
+                </>
+              )}
             </div>
           </div>
           <button
@@ -233,7 +323,12 @@ export function PuttSession({
                   className="flex min-h-tap w-full items-center px-4 text-left text-sm font-semibold"
                   onClick={() => {
                     setMenuOpen(false);
-                    offlineGuard.guard(() => setConfirmingEnd(true));
+                    // Deliberately NOT offline-guarded. Finishing on a green
+                    // with no signal is the central offline case: attemptFinish
+                    // queues it and retries on reconnect. Guarding this would
+                    // make the queued-finish path unreachable — Discard below
+                    // stays guarded because a delete has nothing to queue.
+                    setConfirmingEnd(true);
                   }}
                 >
                   End session

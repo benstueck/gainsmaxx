@@ -9,6 +9,7 @@ import { NumericKeypad } from "@/components/round/numeric-keypad";
 import { GuardedLink } from "@/components/shell/guarded-link";
 import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
 import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
+import { isRedirectError } from "@/lib/offline/redirect-error";
 import {
   deleteWedgeSession,
   finishWedgeSession,
@@ -26,18 +27,6 @@ import {
   getWedgeDraft,
   putWedgeDraft,
 } from "@/lib/offline/wedge-sync";
-
-/** Next.js encodes a successful redirect() as a thrown "NEXT_REDIRECT" digest
- *  rather than a normal return — distinguish that from a real sync failure. */
-function isRedirectError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "digest" in err &&
-    typeof (err as { digest?: unknown }).digest === "string" &&
-    (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
-  );
-}
 
 export function WedgeSession({
   sessionId,

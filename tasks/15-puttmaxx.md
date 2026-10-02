@@ -1,6 +1,6 @@
 # 15 — Puttmaxx (practice-green putting training)
 
-**Status:** Phases 1–6 done (engine, analytics, schema, navigation, entry loop, summary). 7–8 pending.
+**Status:** Phases 1–7 done. Only Phase 8 (Profile stats) and the on-phone pass remain.
 **Depends on:** 05 (SG engine), 10 (offline infra), 13 (Wedgemaxx patterns to copy)
 **Design:** [`../plans/03-puttmaxx.md`](../plans/03-puttmaxx.md) — read first.
 
@@ -243,13 +243,55 @@ screen.
 
 ## Phase 7 — Offline-first
 
-- [ ] Dexie **v3** adding `puttDrafts` (keep v1 and v2 declared so installs upgrade rather than
+- [x] Dexie **v3** adding `puttDrafts` (keep v1 and v2 declared so installs upgrade rather than
       reset). DB name stays `"gainsmaxxing"`.
-- [ ] `lib/offline/putt-sync.ts` mirroring `wedge-sync.ts`; flush on load and on reconnect
-- [ ] Local-first `attemptSave` / `attemptFinish`. **The redirect-success path must clear the
+- [x] `lib/offline/putt-sync.ts` mirroring `wedge-sync.ts`; flush on load and on reconnect
+- [x] Local-first `attemptSave` / `attemptFinish`. **The redirect-success path must clear the
       draft** — skipping that was the Milestone 10 bug and it recurred in Wedgemaxx.
-- [ ] Add `/puttmaxx` to the warmed shell routes in `lib/offline/warm-cache.ts`
+- [x] Add `/puttmaxx` to the warmed shell routes in `lib/offline/warm-cache.ts`
 - [ ] Verify on a real phone: full offline session, offline finish, force-quit + relaunch recovery
+
+**Studied the round and wedge implementations first**, per the user's instruction, and it paid for
+itself immediately — see the bug below.
+
+**Deduplicated rather than copied a third time:** `isRedirectError` was byte-identical in
+`round-session.tsx` and `wedge-session.tsx`. It now lives in `lib/offline/redirect-error.ts`, with
+the reason it exists written down, and all three sessions import it.
+
+### The bug studying them caught
+
+I had wrapped **End session** in `offlineGuard.guard(...)`, mirroring Discard. Wedgemaxx
+deliberately does _not_: finishing on a green with no signal is the **central** offline case, and
+`attemptFinish` exists precisely to queue it. Guarding it would have made the entire queued-finish
+path unreachable from the UI — every line of it correct, and dead. Discard stays guarded because a
+delete has nothing to queue.
+
+### Verified against a production build with the server genuinely stopped
+
+| Scenario                            | Result                                                    |
+| ----------------------------------- | --------------------------------------------------------- |
+| Log a make, server down             | "Saved locally", advanced                                 |
+| Log a 3-step miss, server down      | Queued whole: `made=false, left, comeback 3 ft, holed`    |
+| Dexie state                         | 1 draft, 2 attempts, `wantsFinish: false`                 |
+| Reload while still offline, then up | Mount recovery flushed and **cleared** the draft          |
+| **End session, server down**        | Stayed put, `wantsFinish: true`, 2 attempts queued        |
+| **Reconnect**                       | Retried → **redirected to summary** → **draft cleared**   |
+| Postgres                            | `complete`, 2 of 5 putts, elapsed 60 s, every field right |
+
+That last pair is the trap that bit in Milestone 10 and again in Wedgemaxx: a successful finish
+arrives as a _thrown_ `NEXT_REDIRECT`, so the clear-the-draft line after the await never runs. The
+redirect branch clears it explicitly, and the test above is what proves it — `draftsRemaining: 0`
+after landing on the summary.
+
+**A half-entered putt is deliberately not persisted.** A miss whose comeback hasn't been recorded
+yet is component state only. Writing it would produce a row violating the `made ⇔ no error` check
+constraint; losing it costs one re-entry, and the constraint exists to protect the analytics.
+
+**Known shared characteristic, not introduced here:** all three modes write with delete-then-insert
+outside a transaction, so a connection dropped between the two statements leaves the server
+briefly empty. It self-heals — the action throws, the client queues a draft holding the full state,
+and the next successful save restores it. Wrapping all three in transactions would be a worthwhile
+follow-up, but diverging in one mode would be worse than the status quo.
 
 ## Phase 8 — Profile
 

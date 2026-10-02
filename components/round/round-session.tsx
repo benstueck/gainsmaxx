@@ -22,6 +22,7 @@ import { BigButton } from "@/components/ui/big-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OfflineNoticeModal } from "@/components/shell/offline-notice-modal";
 import { useOfflineGuard } from "@/lib/offline/use-offline-guard";
+import { isRedirectError } from "@/lib/offline/redirect-error";
 import { NumericKeypad } from "@/components/round/numeric-keypad";
 import {
   holeShotInputs,
@@ -42,18 +43,6 @@ import {
 } from "@/lib/sg";
 import { deleteRound, finishRound, saveRound } from "@/app/round/actions";
 import { getDraft, putDraft, clearDraft } from "@/lib/offline/round-sync";
-
-/** Next.js encodes a successful redirect() as a thrown "NEXT_REDIRECT" digest
- *  rather than a normal return — distinguish that from a real sync failure. */
-function isRedirectError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "digest" in err &&
-    typeof (err as { digest?: unknown }).digest === "string" &&
-    (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
-  );
-}
 
 const END_LIES: Lie[] = ["fairway", "rough", "sand", "recovery", "green"];
 const LIE_LABEL: Record<Lie, string> = {
