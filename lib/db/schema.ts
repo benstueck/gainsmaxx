@@ -6,6 +6,7 @@ import {
   integer,
   numeric,
   boolean,
+  jsonb,
   timestamp,
   unique,
   uniqueIndex,
@@ -46,6 +47,22 @@ export const sgCategoryEnum = pgEnum("sg_category", [
   "arg",
   "putt",
 ]);
+
+// --- Puttmaxx enums ----------------------------------------------------------
+// Slope along the line of the putt, and which way it breaks as the player
+// looks at it. Design: plans/03-puttmaxx.md.
+export const puttElevationEnum = pgEnum("putt_elevation", [
+  "uphill",
+  "downhill",
+  "flat",
+]);
+
+export const puttBreakEnum = pgEnum("putt_break", ["l2r", "r2l", "straight"]);
+
+// The two axes of the 3×3 miss grid. Each is independently nullable on a
+// shot: a pure line miss had the right pace, and vice versa.
+export const puttSpeedErrorEnum = pgEnum("putt_speed_error", ["fast", "slow"]);
+export const puttLineErrorEnum = pgEnum("putt_line_error", ["left", "right"]);
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -248,6 +265,126 @@ export const wedgeShots = pgTable(
   ],
 );
 
+// --- Puttmaxx sessions -------------------------------------------------------
+// Practice-green putting. Design + analytics: plans/03-puttmaxx.md.
+// Reuses roundStatusEnum — the identical in_progress/complete state machine.
+export const puttSessions = pgTable(
+  "putt_sessions",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: uuid("user_id").notNull(),
+    // Client-generated id for offline-first idempotent sync.
+    clientUuid: uuid("client_uuid").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    // Session parameters, chosen at setup. Distances in FEET (green lie).
+    puttCount: integer("putt_count").notNull(),
+    minDistance: integer("min_distance").notNull(),
+    maxDistance: integer("max_distance").notNull(),
+    // Active time only — the timer pauses when the user backs out.
+    elapsedSeconds: integer("elapsed_seconds").notNull().default(0),
+    /**
+     * The full sequence of called putts, rolled once at creation:
+     *   [{ distanceFt, elevation, breakDirection }, …]
+     *
+     * Rolled up front for two reasons. A reload or force-quit must hand back
+     * the SAME putt rather than re-rolling it, and the offline layer gets the
+     * sequence for free. More importantly the sequence can only be *balanced*
+     * — equal counts of each break direction — if it's dealt as a whole; drawn
+     * per putt, a skewed session lets a read fault masquerade as a stroke bias.
+     *
+     * jsonb rather than three parallel arrays because the three fields travel
+     * together and parallel arrays can drift out of sync.
+     */
+    putts: jsonb("putts")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    status: roundStatusEnum("status").notNull().default("in_progress"),
+    ...timestamps,
+  },
+  (t) => [
+    unique("putt_sessions_user_client_uuid_key").on(t.userId, t.clientUuid),
+    check("putt_sessions_count_check", sql`${t.puttCount} between 1 and 100`),
+    check(
+      "putt_sessions_distance_check",
+      sql`${t.minDistance} > 0 and ${t.minDistance} <= ${t.maxDistance}`,
+    ),
+    check("putt_sessions_elapsed_check", sql`${t.elapsedSeconds} >= 0`),
+    index("putt_sessions_user_started_idx").on(t.userId, t.startedAt),
+  ],
+);
+
+// --- Puttmaxx attempts -------------------------------------------------------
+// One row per hole: the called putt, how the first one finished, and — when it
+// missed — the comeback. The comeback is captured on the same 3×3 grid rather
+// than a yes/no, because it's a putt and therefore a data point.
+export const puttAttempts = pgTable(
+  "putt_attempts",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => puttSessions.id, { onDelete: "cascade" }),
+    puttNumber: integer("putt_number").notNull(),
+
+    // The putt the app called out.
+    distance: integer("distance").notNull(),
+    elevation: puttElevationEnum("elevation").notNull(),
+    breakDirection: puttBreakEnum("break_direction").notNull(),
+
+    // First putt. Invariant: made === (speed_error IS NULL AND line_error IS
+    // NULL) — the grid's centre button *is* "Made!", so any other cell carries
+    // at least one error.
+    made: boolean("made").notNull(),
+    speedError: puttSpeedErrorEnum("speed_error"),
+    lineError: puttLineErrorEnum("line_error"),
+    // Self-reported cause, as distinct from the measured outcome above.
+    misreadLine: boolean("misread_line").notNull().default(false),
+    misreadSpeed: boolean("misread_speed").notNull().default(false),
+
+    // The comeback. All null when the first putt dropped.
+    comebackDistance: integer("comeback_distance"),
+    comebackMade: boolean("comeback_made"),
+    comebackSpeedError: puttSpeedErrorEnum("comeback_speed_error"),
+    comebackLineError: puttLineErrorEnum("comeback_line_error"),
+
+    ...timestamps,
+  },
+  (t) => [
+    unique("putt_attempts_session_putt_number_key").on(
+      t.sessionId,
+      t.puttNumber,
+    ),
+    check("putt_attempts_distance_check", sql`${t.distance} > 0`),
+    check(
+      "putt_attempts_comeback_distance_check",
+      sql`${t.comebackDistance} is null or ${t.comebackDistance} >= 0`,
+    ),
+    // A made putt has no miss to describe, and a miss must have missed
+    // somehow. Enforced here so the analytics can trust the invariant rather
+    // than defending against contradictory rows.
+    check(
+      "putt_attempts_made_consistency_check",
+      sql`(${t.made} and ${t.speedError} is null and ${t.lineError} is null)
+          or (not ${t.made} and (${t.speedError} is not null or ${t.lineError} is not null))`,
+    ),
+    // A made putt has no comeback; a missed one must record where it left the
+    // ball. The comeback's own outcome is filled in a moment later, so it is
+    // deliberately NOT required here.
+    check(
+      "putt_attempts_comeback_presence_check",
+      sql`(${t.made} and ${t.comebackDistance} is null and ${t.comebackMade} is null)
+          or (not ${t.made})`,
+    ),
+    index("putt_attempts_session_idx").on(t.sessionId),
+  ],
+);
+
 // --- Inferred types ----------------------------------------------------------
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
@@ -257,3 +394,7 @@ export type Hole = typeof holes.$inferSelect;
 export type NewHole = typeof holes.$inferInsert;
 export type Shot = typeof shots.$inferSelect;
 export type NewShot = typeof shots.$inferInsert;
+export type PuttSession = typeof puttSessions.$inferSelect;
+export type NewPuttSession = typeof puttSessions.$inferInsert;
+export type PuttAttemptRow = typeof puttAttempts.$inferSelect;
+export type NewPuttAttemptRow = typeof puttAttempts.$inferInsert;

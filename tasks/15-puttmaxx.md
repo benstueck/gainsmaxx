@@ -1,6 +1,6 @@
 # 15 — Puttmaxx (practice-green putting training)
 
-**Status:** Phases 1–2 done (engine, generator, params, analytics — 61 tests). 3–8 pending.
+**Status:** Phases 1–3 done (engine, analytics, schema applied live — 67 tests). 4–8 pending.
 **Depends on:** 05 (SG engine), 10 (offline infra), 13 (Wedgemaxx patterns to copy)
 **Design:** [`../plans/03-puttmaxx.md`](../plans/03-puttmaxx.md) — read first.
 
@@ -90,15 +90,49 @@ should switch. Real sessions get to decide.
 
 ## Phase 3 — Schema
 
-- [ ] `putt_sessions` + `putt_attempts` in `lib/db/schema.ts` (shapes in the design plan). Reuse
+- [x] `putt_sessions` + `putt_attempts` in `lib/db/schema.ts` (shapes in the design plan). Reuse
       `roundStatusEnum`. New enums for elevation, break, speed error, line error.
-- [ ] Pre-rolled `putts jsonb not null default '[]'` — same reasoning as Wedgemaxx `targets`.
-- [ ] Generated migration + hand-written RLS migration (FK to `auth.users`, per-user policies,
+- [x] Pre-rolled `putts jsonb not null default '[]'` — same reasoning as Wedgemaxx `targets`.
+- [x] Generated migration + hand-written RLS migration (FK to `auth.users`, per-user policies,
       attempts owned transitively via the session) registered in `meta/_journal.json`.
-- [ ] Apply to the live project and **verify in the DB**: tables present, `relrowsecurity = true`,
+- [x] Apply to the live project and **verify in the DB**: tables present, `relrowsecurity = true`,
       policies active.
-- [ ] `lib/db/putt-queries.ts` — load one session, load all for a user (bounded query count),
+- [x] `lib/db/putt-queries.ts` — load one session, load all for a user (bounded query count),
       last-session params for prefilling setup.
+
+**Migrations:** `0006_big_sleepwalker.sql` (generated) + hand-written `0007_putt_rls.sql`,
+registered in `meta/_journal.json`. Applied to the live project.
+
+**Verified in the DB**, not just from the migration's success message: both tables present with
+`relrowsecurity = true`, both policies active, the `auth.users` FK present, and all four check
+constraints on `putt_attempts`.
+
+**Constraints verified to bite, each in its own savepoint:**
+
+| Rejected                        | By                                      |
+| ------------------------------- | --------------------------------------- |
+| made putt carrying a line error | `putt_attempts_made_consistency_check`  |
+| miss with no error recorded     | `putt_attempts_made_consistency_check`  |
+| made putt carrying a comeback   | `putt_attempts_comeback_presence_check` |
+| duplicate putt number           | `putt_attempts_session_putt_number_key` |
+| negative comeback distance      | `putt_attempts_comeback_distance_check` |
+| min > max distance              | `putt_sessions_distance_check`          |
+| putt count of zero              | `putt_sessions_count_check`             |
+
+Savepoints matter here: the first run looked like a clean sweep, but the opening failure had
+aborted the transaction, so every later "rejection" was Postgres refusing an aborted command
+rather than a constraint firing. Only one of the seven was actually proven. The rerun isolates each
+check and names the constraint that caught it, and asserts a **valid** miss is still accepted — so
+the checks can't be passing by rejecting everything.
+
+The `made ⇔ no error` invariant is now enforced in the database, not just documented on the type,
+which is what lets the analytics trust it rather than defend against contradictory rows.
+
+**`parsePutts` lives in `lib/putt/parse.ts`, not the query layer.** `jsonb` guarantees valid JSON
+and nothing about shape, so the boundary needs a real parser — and it needs tests, which
+`lib/db/putt-queries.ts` can't have because `server-only` won't load under vitest. Same lesson, and
+the same fix, as `parseHandicapSnapshot` in `lib/baseline.ts`. A malformed entry drops rather than
+failing the whole sequence: one corrupt putt shouldn't cost the player the other seventeen.
 
 ## Phase 4 — Navigation + session feed + setup
 

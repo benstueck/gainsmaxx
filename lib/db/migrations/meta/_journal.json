@@ -43,6 +43,20 @@
       "when": 1785554722094,
       "tag": "0005_uneven_ben_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790955323398,
+      "tag": "0006_big_sleepwalker",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790955323399,
+      "tag": "0007_putt_rls",
+      "breakpoints": true
     }
   ]
 }

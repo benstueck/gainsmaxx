@@ -14,6 +14,8 @@ export {
 
 export { rollSession } from "./generator";
 
+export { parsePutts } from "./parse";
+
 export { summarizeSession } from "./analytics";
 export type {
   MissCell,
