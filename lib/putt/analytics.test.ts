@@ -113,6 +113,48 @@ describe("pooled vs first-putt stroke gauge", () => {
   });
 });
 
+describe("a flagged misread is attributed to the read, not the stroke", () => {
+  it("keeps a flagged line misread out of the direction gauge", () => {
+    // The flag is the player's own attribution, and it's the one thing the
+    // statistics can't recover: "I read it wrong" and "I read it right and
+    // stroked it badly" produce an identical outcome.
+    const s = summarizeSession([
+      missed("left"),
+      missed("left", "straight", { misreadLine: true }),
+    ]);
+    expect(s.directionBias.counts).toEqual([1, 0]);
+    expect(s.misreadLineCount).toBe(1);
+  });
+
+  it("keeps a flagged speed misread out of the speed gauge", () => {
+    const s = summarizeSession([
+      putt({ speedError: "slow", comebackDistanceFt: 2, comebackMade: true }),
+      putt({
+        speedError: "slow",
+        misreadSpeed: true,
+        comebackDistanceFt: 2,
+        comebackMade: true,
+      }),
+    ]);
+    expect(s.speedBias.counts).toEqual([0, 1]);
+  });
+
+  it("still counts a flagged line misread toward the READ gauge", () => {
+    // It IS a read error — that's the whole point of excluding it elsewhere.
+    const s = summarizeSession([missed("right", "l2r", { misreadLine: true })]);
+    expect(s.readBias.counts).toEqual([0, 1]);
+    expect(s.directionBias.n).toBe(0);
+  });
+
+  it("does not treat an unflagged miss as proof the read was good", () => {
+    // Misreading without realising is the commonest case of all, which is why
+    // the exclusion only runs one way.
+    const s = summarizeSession([missed("right", "l2r")]);
+    expect(s.directionBias.counts).toEqual([0, 1]);
+    expect(s.unflaggedLowMisses).toBe(1);
+  });
+});
+
 describe("populations", () => {
   it("folds comeback misses into the stroke gauge but not make %", () => {
     const session = [

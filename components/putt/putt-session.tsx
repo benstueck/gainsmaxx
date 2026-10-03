@@ -365,28 +365,6 @@ export function PuttSession({
           >
             {headerNote}
           </p>
-          {phase === "first" && editing == null && (
-            <div className="mt-3 flex items-center justify-center gap-4 text-sm">
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={misreadLine}
-                  onChange={(e) => setMisreadLine(e.target.checked)}
-                  className="h-5 w-5 accent-primary"
-                />
-                Misread line
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={misreadSpeed}
-                  onChange={(e) => setMisreadSpeed(e.target.checked)}
-                  className="h-5 w-5 accent-primary"
-                />
-                Misread speed
-              </label>
-            </div>
-          )}
         </div>
 
         {/* History scrolls; the dock below never moves. */}
@@ -491,6 +469,36 @@ export function PuttSession({
             </div>
           ) : (
             <div className="flex flex-col gap-3 pb-3">
+              {/* In the dock, not under the putt call. The flag is the only
+                  thing that can tell a misread from a bad stroke — the
+                  statistics can't recover it afterwards — so it belongs in the
+                  thumb zone as part of logging the putt, not as fine print at
+                  the top of the screen. */}
+              {phase === "first" && (
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      ["Misread line", misreadLine, setMisreadLine],
+                      ["Misread speed", misreadSpeed, setMisreadSpeed],
+                    ] as const
+                  ).map(([label, on, set]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => set((v) => !v)}
+                      className={cn(
+                        "min-h-tap rounded-app border px-3 text-sm font-semibold active:scale-95",
+                        on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-surface text-muted",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <PuttGrid
                 onChoose={phase === "first" ? onFirstPutt : onComebackResult}
               />

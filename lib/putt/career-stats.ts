@@ -78,12 +78,15 @@ export function puttCareerStats(
   const attempts = played.flatMap((s) => s.summary.attempts);
   const count = <T>(xs: T[], v: T) => xs.filter((x) => x === v).length;
 
+  // Flagged misreads are excluded from the stroke axes, as in summarizeSession:
+  // a miss the player attributed to the read describes their green reading,
+  // not their face angle.
   const lineErrors = [
-    ...attempts.map((a) => a.lineError),
+    ...attempts.filter((a) => !a.misreadLine).map((a) => a.lineError),
     ...attempts.map((a) => a.comebackLineError),
   ].filter((e): e is LineError => e != null);
   const speedErrors = [
-    ...attempts.map((a) => a.speedError),
+    ...attempts.filter((a) => !a.misreadSpeed).map((a) => a.speedError),
     ...attempts.map((a) => a.comebackSpeedError),
   ].filter((e): e is SpeedError => e != null);
   // Read stays first-putt-only: a comeback's break is inferred and tiny.

@@ -163,16 +163,30 @@ export function summarizeSession(attempts: PuttAttempt[]): PuttSessionSummary {
   const results = attempts.map(scoreAttempt);
   const missedFirst = results.filter((r) => !r.made);
 
-  // Direction and speed: every putt struck, first putts and comebacks alike.
+  // Direction and speed: every putt struck, first putts and comebacks alike —
+  // EXCEPT a miss the player flagged as a misread on that axis.
+  //
+  // The flag is the player's own attribution, and it's the one piece of
+  // information the statistics can't recover: "I read it wrong" and "I read it
+  // right and stroked it badly" look identical in the outcome. If they say the
+  // line was misread, that miss describes their green reading, not their face
+  // angle, so counting it as a direction tendency would be attributing it to
+  // the wrong fault. Same argument on the speed axis.
+  //
+  // It only goes one way, though. An *unflagged* miss isn't proof the read was
+  // good — misreading without realising is the commonest case of all, which is
+  // what `unflaggedLowMisses` exists to surface.
   const firstLineErrors: LineError[] = results
+    .filter((r) => !r.misreadLine)
     .map((r) => r.lineError)
     .filter((e): e is LineError => e != null);
   const lineErrors: LineError[] = [
     ...firstLineErrors,
+    // Comebacks carry no misread flag of their own.
     ...results.map((r) => r.comebackLineError),
   ].filter((e): e is LineError => e != null);
   const speedErrors: SpeedError[] = [
-    ...results.map((r) => r.speedError),
+    ...results.filter((r) => !r.misreadSpeed).map((r) => r.speedError),
     ...results.map((r) => r.comebackSpeedError),
   ].filter((e): e is SpeedError => e != null);
 

@@ -446,3 +446,44 @@ Verified against the user's own two sessions: the summary reads 63% right / 83% 
 no badges (correct at n = 6–8), and Profile reads 62% right / 78% low / **81% slow TREND**.
 
 `bias-gauge.tsx` was deleted rather than left beside its replacement.
+
+## The misread flag now drives the gauges
+
+The user asked why a right miss on an L→R putt counts as a _direction_ tendency when it's really a
+read fault. It's a real residual flaw, and their data shows it exactly:
+
+```
+Putts DEALT:              l2r 6   r2l 6   straight 6     <- balanced deck works
+Putts MISSED with a line: l2r 4   r2l 5   straight 1     <- not balanced
+
+  l2r misses:  0 left, 4 right    <- all four are "low": the under-read
+  r2l misses:  3 left, 2 right
+```
+
+The generator balances the putts it **deals**, but only _missed_ putts carry a line error, and
+which putts get missed isn't under its control. So an under-read still leaks into Direction:
+pooled, that session read 62% right; restricted to putts where break can't confound it (straight
+putts plus comebacks) it was 2–2, **dead even**. The entire right lean was read leakage.
+
+The user's own proposal was the right one, and it's what the misread flag was built for: if the
+player says they misread the line, that miss describes their green reading, not their face angle.
+So a flagged misread is now **excluded from Direction**, and a flagged speed misread from Speed, by
+the same argument. Flagged line misreads still count toward Read — they _are_ read errors, which is
+the point.
+
+**The exclusion only runs one way.** An unflagged miss is not proof the read was good; misreading
+without realising is the commonest case of all, and is exactly what `unflaggedLowMisses` surfaces.
+This fixes attribution where the player knows, and nothing where they don't.
+
+**So the flag had to matter in the input flow**, and it didn't: two small checkboxes under the putt
+call, at the top of the screen, far from the thumb. They're now full-width toggle buttons in the
+dock directly above the grid, 64 px tall, filled when active. The flag is the only signal the
+statistics cannot recover afterwards, so it belongs in the thumb zone as part of logging the putt.
+
+Verified end to end: two identical Left misses, one flagged, produce a Direction gauge of
+`[1, 0]` rather than `[2, 0]`, with the flagged one counted as a misread. Dock measured at 375×812:
+fits with no page scroll.
+
+**Still open** (not done, deliberately): Direction remains confounded for _unflagged_ misreads. The
+full fix is to measure it only on straight putts and comebacks, which costs most of the sample —
+worth revisiting if Direction ever earns a TREND badge while Read is also strong.
