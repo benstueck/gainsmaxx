@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rollSession } from "./generator";
+import { rollSession, seededRandom } from "./generator";
 import type { BreakDirection, Elevation } from "./types";
 
 /** Deterministic PRNG (mulberry32) so a failure is always reproducible. */
@@ -144,5 +144,38 @@ describe("rollSession — balanced reads", () => {
       }
     }
     expect(favoured.size).toBeGreaterThan(1);
+  });
+});
+
+describe("seededRandom", () => {
+  // The fallback sequence is rolled during render, which happens on BOTH the
+  // server and the client. An unseeded roll gives each a different putt, which
+  // React reports as a hydration mismatch and recovers from by discarding the
+  // server tree — so the player can be shown one putt and handed another.
+  it("gives an identical sequence for the same seed", () => {
+    const a = Array.from({ length: 8 }, seededRandom("session-abc"));
+    const b = Array.from({ length: 8 }, seededRandom("session-abc"));
+    expect(a).toEqual(b);
+  });
+
+  it("gives different sequences for different seeds", () => {
+    const a = Array.from({ length: 8 }, seededRandom("session-abc"));
+    const b = Array.from({ length: 8 }, seededRandom("session-xyz"));
+    expect(a).not.toEqual(b);
+  });
+
+  it("produces a session reproducible from its id alone", () => {
+    expect(rollSession(12, 5, 12, seededRandom("abc"))).toEqual(
+      rollSession(12, 5, 12, seededRandom("abc")),
+    );
+  });
+
+  it("stays in [0, 1)", () => {
+    const r = seededRandom("whatever");
+    for (let i = 0; i < 500; i++) {
+      const v = r();
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+    }
   });
 });

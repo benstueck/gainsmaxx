@@ -487,3 +487,29 @@ fits with no page scroll.
 **Still open** (not done, deliberately): Direction remains confounded for _unflagged_ misreads. The
 full fix is to measure it only on straight putts and comebacks, which costs most of the sample —
 worth revisiting if Direction ever earns a TREND badge while Read is also strong.
+
+### Misread toggles restyled, and a hydration bug found while checking
+
+The toggles were styled like the outcome grid below them, so they read as another row of actions
+rather than an annotation on one. They're now a compact pill row with a `MISREAD?` label: dashed
+and hollow when unset, filled dark with a check when set. Deliberately **not** the primary green —
+that reads as "Made!" one row below, and a misread isn't a win. `--tap: 64px` is documented as the
+minimum _primary_ target, so 44 px is right for a secondary control.
+
+**A real bug surfaced while verifying this**, via the browser's issue badge rather than anything
+that looked wrong on screen: a **hydration mismatch**.
+
+```
++ 12 ft · Downhill · Left → Right     (client)
+- 7 ft · Flat · Straight              (server)
+```
+
+The fallback sequence was rolled with `Math.random()` inside `useState`, which runs during render —
+and render happens on the server _and_ the client. Each rolled a different putt, so React discarded
+the server tree and regenerated it. The player could be shown one putt and handed another.
+
+Two fixes: the fallback is now seeded from the **session id**, so both sides agree (and the same
+session shows the same putt across reloads), and when every putt is logged the screen reads
+**"All 9 putts logged"** rather than calling a putt that isn't coming. 4 regression tests.
+
+Worth noting it was invisible without checking the console — the screen looked fine.

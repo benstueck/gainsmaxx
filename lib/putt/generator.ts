@@ -3,6 +3,32 @@ import type { BreakDirection, Elevation, PuttSpec } from "./types";
 const BREAKS: BreakDirection[] = ["l2r", "r2l", "straight"];
 const ELEVATIONS: Elevation[] = ["uphill", "downhill", "flat"];
 
+/**
+ * A deterministic PRNG seeded from a string (mulberry32 over an FNV-1a hash).
+ *
+ * Needed because the fallback sequence is rolled during render, and render
+ * happens on BOTH the server and the client. `Math.random()` there produces a
+ * different putt in each, which React reports as a hydration mismatch and
+ * recovers from by throwing away the server tree — so the player could be
+ * shown one putt, then silently handed another. Seeding from the session id
+ * makes both sides agree, and keeps the same session showing the same putt
+ * across reloads.
+ */
+export function seededRandom(seed: string): () => number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** Fisher–Yates, using an injectable source so sessions are reproducible in tests. */
 function shuffle<T>(items: T[], random: () => number): T[] {
   const out = items.slice();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { X, MoreVertical, WifiOff } from "lucide-react";
+import { X, MoreVertical, WifiOff, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BigButton } from "@/components/ui/big-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -22,7 +22,12 @@ import {
   savePuttSession,
 } from "@/app/puttmaxx/actions";
 import { formatClock } from "@/lib/wedge";
-import { rollSession, scoreAttempt, summarizeSession } from "@/lib/putt";
+import {
+  rollSession,
+  scoreAttempt,
+  seededRandom,
+  summarizeSession,
+} from "@/lib/putt";
 import type { PuttAttempt, PuttSpec } from "@/lib/putt";
 
 const ELEVATION_LABEL = {
@@ -77,9 +82,15 @@ export function PuttSession({
    * Sessions created before the sequence was pre-rolled (or with a corrupt
    * jsonb entry) have gaps. Roll a stand-in once so the spec can't change
    * under the player mid-putt.
+   *
+   * Seeded from the session id, NOT Math.random(): this runs during render, on
+   * both the server and the client, and an unseeded roll gives each a
+   * different putt — a hydration mismatch that React recovers from by
+   * discarding the server tree, so the player can be shown one putt and handed
+   * another.
    */
   const [fallback] = useState<PuttSpec[]>(() =>
-    rollSession(puttCount, minDistance, maxDistance),
+    rollSession(puttCount, minDistance, maxDistance, seededRandom(sessionId)),
   );
 
   // Elapsed counts ACTIVE seconds only: it advances by real wall-clock deltas
@@ -264,11 +275,15 @@ export function PuttSession({
   }, [sessionId]);
 
   const headerNote =
-    phase === "comebackDistance"
-      ? "How far was the comeback?"
-      : phase === "comebackResult"
-        ? `Comeback from ${comebackFt} ft`
-        : `${spec.distanceFt} ft · ${ELEVATION_LABEL[spec.elevation]} · ${BREAK_LABEL[spec.breakDirection]}`;
+    done && editing == null
+      ? // Every putt is in. The spec here would be a stand-in past the end of
+        // the sequence, so calling a putt that isn't coming would be nonsense.
+        `All ${puttCount} putts logged`
+      : phase === "comebackDistance"
+        ? "How far was the comeback?"
+        : phase === "comebackResult"
+          ? `Comeback from ${comebackFt} ft`
+          : `${spec.distanceFt} ft · ${ELEVATION_LABEL[spec.elevation]} · ${BREAK_LABEL[spec.breakDirection]}`;
 
   return (
     <>
@@ -469,31 +484,38 @@ export function PuttSession({
             </div>
           ) : (
             <div className="flex flex-col gap-3 pb-3">
-              {/* In the dock, not under the putt call. The flag is the only
-                  thing that can tell a misread from a bad stroke — the
-                  statistics can't recover it afterwards — so it belongs in the
-                  thumb zone as part of logging the putt, not as fine print at
-                  the top of the screen. */}
+              {/* An annotation on the outcome, not an outcome itself, so it
+                  reads as a different class of control from the grid: a
+                  compact pill row rather than another slab. Dashed and hollow
+                  when unset, filled when set, so "did I flag this?" is legible
+                  at a glance without reading the label. */}
               {phase === "first" && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted">
+                    Misread?
+                  </span>
                   {(
                     [
-                      ["Misread line", misreadLine, setMisreadLine],
-                      ["Misread speed", misreadSpeed, setMisreadSpeed],
+                      ["Line", misreadLine, setMisreadLine],
+                      ["Speed", misreadSpeed, setMisreadSpeed],
                     ] as const
                   ).map(([label, on, set]) => (
                     <button
                       key={label}
                       type="button"
                       aria-pressed={on}
+                      aria-label={`Misread ${label.toLowerCase()}`}
                       onClick={() => set((v) => !v)}
                       className={cn(
-                        "min-h-tap rounded-app border px-3 text-sm font-semibold active:scale-95",
+                        "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border text-sm font-semibold active:scale-95",
                         on
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-surface text-muted",
+                          ? // Deliberately not the primary green: that reads as
+                            // "Made!" one row below, and a misread isn't a win.
+                            "border-foreground bg-foreground text-background"
+                          : "border-dashed border-border text-muted",
                       )}
                     >
+                      {on && <Check size={15} strokeWidth={3} />}
                       {label}
                     </button>
                   ))}

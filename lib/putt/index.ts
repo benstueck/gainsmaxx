@@ -12,7 +12,7 @@ export {
   scoreAttempt,
 } from "./engine";
 
-export { rollSession } from "./generator";
+export { rollSession, seededRandom } from "./generator";
 
 export { parsePutts } from "./parse";
 
