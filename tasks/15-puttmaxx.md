@@ -412,3 +412,37 @@ typographic convention rather than prose punctuation. Say so if that should go t
 
 En dashes in numeric ranges (`5–12 ft`) are a different character and were left alone, since
 that's the correct dash for a range.
+
+## Tendencies redesigned (after two real 9-putt sessions)
+
+The user played two sessions and never saw a tendency: every gauge read "Not a tendency yet", and
+the Profile surfaced only the single axis that cleared the test. Their framing was right —
+**"even if not statistically significant, it's important to see a session's tendencies to see
+general trends in your putting."**
+
+Their actual career numbers show why:
+
+| Axis      | Split | Share        | p     | Was shown?           |
+| --------- | ----- | ------------ | ----- | -------------------- |
+| Speed     | 13–3  | **81% slow** | 0.021 | Yes, as the only one |
+| Read      | 7–2   | **78% low**  | 0.180 | **No**               |
+| Direction | 8–5   | 62% right    | 0.581 | **No**               |
+
+Hiding a 78% low lean behind "not a tendency yet" is the wrong trade. The share is a _fact_ about
+putts they actually hit; the gate belongs on the _claim_, not on whether the number is worth
+seeing at all. The earlier fix got halfway there (it stated the count) but still buried it in prose
+and still filtered the Profile.
+
+**Now:** `BiasResult` carries `share` (0.5–1), and a shared `TendencyRows` renders all three axes
+identically on the summary and on Profile — label, sample size, **"81% slow"**, a bar, and a
+**TREND** badge only on the ones the sample supports. The explanatory strings ("stroke — face &
+path", "all putts, including comebacks") are gone; they cost three lines each and said nothing a
+golfer needed.
+
+**Session cards** gained a one-line snapshot of the two strongest leans (`88% slow  83% low`),
+shown only above 60% with n ≥ 3 so a card never carries meaningless percentages.
+
+Verified against the user's own two sessions: the summary reads 63% right / 83% low / 88% slow with
+no badges (correct at n = 6–8), and Profile reads 62% right / 78% low / **81% slow TREND**.
+
+`bias-gauge.tsx` was deleted rather than left beside its replacement.

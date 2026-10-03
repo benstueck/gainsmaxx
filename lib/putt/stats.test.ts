@@ -81,6 +81,22 @@ describe("detectBias", () => {
     expect(dir(3, 9).tilt).toBeCloseTo(0.5, 10);
   });
 
+  it("reports the dominant side's share, which is always shown", () => {
+    // The descriptive number. 78% low is worth knowing at p = 0.18; hiding it
+    // behind a verdict taught the player nothing about their own round.
+    expect(dir(10, 0).share).toBe(1);
+    expect(dir(7, 2).share).toBeCloseTo(7 / 9, 10);
+    expect(dir(2, 7).share).toBeCloseTo(7 / 9, 10);
+    expect(dir(5, 5).share).toBe(0.5);
+    expect(dir(0, 0).share).toBe(0);
+  });
+
+  it("separates share from significance — a high share can still be unproven", () => {
+    const b = dir(4, 0);
+    expect(b.share).toBe(1);
+    expect(b.significant).toBe(false);
+  });
+
   it("still exposes the tilt when it won't call it, so the gauge can render", () => {
     const b = dir(6, 4);
     expect(b.significant).toBe(false);

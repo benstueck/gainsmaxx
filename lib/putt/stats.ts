@@ -42,6 +42,15 @@ export interface BiasResult<T extends string> {
   n: number;
   /** −1 = entirely the first side, +1 = entirely the second, 0 = even. */
   tilt: number;
+  /**
+   * The dominant side's share, 0.5 (dead even) to 1 (unanimous).
+   *
+   * This is the *descriptive* number, and it's always shown. 78% low is worth
+   * knowing even at p = 0.18: it's what actually happened, and a player
+   * reading their own trends is better served by the proportion than by a
+   * verdict withheld. `significant` stays separate for the claim.
+   */
+  share: number;
   /** Which way it leans. Null only when dead even (or empty). */
   leaning: T | null;
   pValue: number;
@@ -75,6 +84,7 @@ export function detectBias<T extends string>(
     counts,
     n,
     tilt: n === 0 ? 0 : (b - a) / n,
+    share: n === 0 ? 0 : Math.max(a, b) / n,
     leaning: a === b ? null : a > b ? sides[0] : sides[1],
     pValue,
     significant: n > 0 && a !== b && pValue < BIAS_ALPHA,

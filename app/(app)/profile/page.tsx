@@ -15,6 +15,7 @@ import {
 } from "@/components/profile/settings-forms";
 import { wedgeCareerStats } from "@/lib/wedge";
 import { puttCareerStats } from "@/lib/putt";
+import { TendencyRows } from "@/components/putt/tendency-rows";
 import type { SgCategory } from "@/lib/sg";
 
 const CATEGORY_LABEL: Record<SgCategory, string> = {
@@ -206,48 +207,21 @@ export default async function ProfilePage() {
               </div>
             </div>
 
-            {/* Career tendencies. A single session rarely has enough misses to
-                clear the significance gate; pooled across sessions is where a
-                real pattern shows and a fluke doesn't. Only called ones are
-                listed — silence here means "nothing proven yet", which is the
-                honest state most of the time. */}
-            {(putt.directionBias.significant ||
-              putt.readBias.significant ||
-              putt.speedBias.significant) && (
-              <div className="mt-4 border-t border-border pt-3">
+            {/* All three, always. A share is a fact about putts actually
+                hit; only the "Trend" badge waits for the evidence. Showing
+                just the one that cleared the test hid a 78% lean the player
+                could see in their own round. */}
+            {putt.directionBias.n + putt.readBias.n + putt.speedBias.n > 0 && (
+              <div className="mt-4 border-t border-border pt-2">
                 <div className="text-xs font-semibold text-muted">
-                  CAREER TENDENCIES
+                  TENDENCIES
                 </div>
-                <ul className="mt-1 flex flex-col gap-0.5 text-sm">
-                  {putt.readBias.significant && (
-                    <li>
-                      Misses{" "}
-                      <span className="font-semibold">
-                        {putt.readBias.leaning === "low" ? "low" : "high"}
-                      </span>{" "}
-                      , {putt.readBias.leaning === "low" ? "under" : "over"}
-                      -reading the break ({putt.readBias.n} putts)
-                    </li>
-                  )}
-                  {putt.directionBias.significant && (
-                    <li>
-                      Misses{" "}
-                      <span className="font-semibold">
-                        {putt.directionBias.leaning}
-                      </span>{" "}
-                      , face or path ({putt.directionBias.n} putts)
-                    </li>
-                  )}
-                  {putt.speedBias.significant && (
-                    <li>
-                      Tends{" "}
-                      <span className="font-semibold">
-                        {putt.speedBias.leaning}
-                      </span>{" "}
-                      , pace control ({putt.speedBias.n} putts)
-                    </li>
-                  )}
-                </ul>
+                <TendencyRows
+                  className="mt-1"
+                  direction={putt.directionBias}
+                  read={putt.readBias}
+                  speed={putt.speedBias}
+                />
               </div>
             )}
           </>

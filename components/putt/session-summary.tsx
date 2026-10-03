@@ -10,7 +10,7 @@ import { deletePuttSession } from "@/app/puttmaxx/actions";
 import { formatDuration } from "@/lib/wedge";
 import { scoreAttempt, summarizeSession } from "@/lib/putt";
 import type { PuttAttempt } from "@/lib/putt";
-import { BiasGauge } from "./bias-gauge";
+import { TendencyRows } from "./tendency-rows";
 import { MissMap } from "./miss-map";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -131,36 +131,17 @@ export function PuttSessionSummaryView({
 
           <section className="rounded-app border border-border p-4">
             <h2 className="text-sm font-semibold text-muted">Tendencies</h2>
-            <BiasGauge
-              title="Direction"
-              detects="stroke: face & path"
-              population="all putts, including comebacks"
-              bias={s.directionBias}
-              labels={["Left", "Right"] as const}
-            />
-            <BiasGauge
-              title="Read"
-              detects="under- / over-reading break"
-              population="first putts that broke"
-              bias={s.readBias}
-              labels={["High", "Low"] as const}
-            />
-            <BiasGauge
-              title="Speed"
-              detects="pace control"
-              population="all putts, including comebacks"
-              bias={s.speedBias}
-              labels={["Fast", "Slow"] as const}
+            <TendencyRows
+              className="mt-1"
+              direction={s.directionBias}
+              read={s.readBias}
+              speed={s.speedBias}
             />
 
-            {/* Where the measured read and the self-report disagree — the most
-                actionable line in the summary when it fires.
-
-                Gated on the read bias actually being CALLED, not merely on the
-                count being non-zero. It asserts a cause ("usually means the
-                read"), and an inferential claim off one or two low misses is
-                exactly the astrology the significance gate exists to prevent —
-                this callout was the one place that discipline wasn't applied. */}
+            {/* Where the measured read and the self-report disagree. Still
+                gated on the read bias being called: it asserts a cause, and an
+                inferential claim off one or two low misses is the astrology
+                the significance test exists to prevent. */}
             {s.readBias.significant &&
               s.readBias.leaning === "low" &&
               s.unflaggedLowMisses > 0 && (
@@ -174,12 +155,6 @@ export function PuttSessionSummaryView({
                   read, not the stroke.
                 </p>
               )}
-            {(s.misreadLineCount > 0 || s.misreadSpeedCount > 0) && (
-              <p className="mt-2 text-xs text-muted">
-                You flagged {s.misreadLineCount} line and {s.misreadSpeedCount}{" "}
-                speed misread{s.misreadSpeedCount === 1 ? "" : "s"}.
-              </p>
-            )}
           </section>
 
           {s.bands.length > 1 && (

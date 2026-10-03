@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { GuardedLink } from "@/components/shell/guarded-link";
 import { formatDuration } from "@/lib/wedge";
+import { TendencySnapshot } from "./tendency-rows";
 import type { FeedPuttSession } from "@/lib/db/putt-queries";
 
 const fmtSg = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
@@ -73,6 +74,12 @@ export function SessionCard({ session }: { session: FeedPuttSession }) {
           {session.elapsedSeconds > 0 && (
             <span>{formatDuration(session.elapsedSeconds)}</span>
           )}
+          {/* Strongest leans at a glance — the reason to open the session. */}
+          <TendencySnapshot
+            direction={summary.directionBias}
+            read={summary.readBias}
+            speed={summary.speedBias}
+          />
         </div>
       )}
     </GuardedLink>
